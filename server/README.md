@@ -20,7 +20,16 @@ cd server
 python -m venv .venv
 .\.venv\Scripts\activate          # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
+$env:NEXOIT_ENV = "dev"           # sólo desarrollo local
 uvicorn main:app --reload --port 8000
+```
+
+Sin `NEXOIT_SECRET_KEY` y sin `NEXOIT_ENV=dev` el proceso **aborta al arrancar**
+con un error explícito (fail fast). En producción:
+
+```powershell
+$env:NEXOIT_SECRET_KEY = "<cadena larga y aleatoria>"
+uvicorn main:app --port 8000
 ```
 
 Abrir <http://127.0.0.1:8000/> (sitio) y <http://127.0.0.1:8000/app/registro>
@@ -32,7 +41,8 @@ Abrir <http://127.0.0.1:8000/> (sitio) y <http://127.0.0.1:8000/app/registro>
 
 | Variable | Default | Uso |
 |---|---|---|
-| `NEXOIT_SECRET_KEY` | secreto de desarrollo (inseguro) | firma de la cookie de sesión. **Obligatoria en producción.** |
+| `NEXOIT_SECRET_KEY` | **sin default** | firma de la cookie de sesión. **Obligatoria**: si falta, el proceso no arranca (salvo `NEXOIT_ENV=dev`). |
+| `NEXOIT_ENV` | vacío | `dev` habilita un secreto de desarrollo inseguro **con warning** en consola. Cualquier otro valor exige `NEXOIT_SECRET_KEY`. |
 | `NEXOIT_DB` | `server/app.sqlite3` | ruta alternativa de la base. |
 
 ## Administradores
@@ -49,6 +59,7 @@ Abrir <http://127.0.0.1:8000/> (sitio) y <http://127.0.0.1:8000/app/registro>
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/` | hub (sirve `../index.html` vía whitelist) |
+| GET | `/index.html` | alias explícito del hub (links "Volver a NexoIT") |
 | GET | `/grow/index.html`, `/home/index.html` | landings de división (whitelist) |
 | GET | `/assets/*` | estáticos del sitio (CSS, SVG, JS) |
 | GET/POST | `/app/registro` | alta abierta (nombre, email, password ≥ 8) |

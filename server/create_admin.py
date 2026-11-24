@@ -24,6 +24,9 @@ def main(argv: list[str]) -> int:
     password = argv[2]
     nombre = (argv[3] if len(argv) > 3 else "Admin").strip() or "Admin"
 
+    if len(nombre) > 120:
+        print("El nombre no puede superar los 120 caracteres.")
+        return 2
     if not auth.valid_email(email):
         print(f"Email inválido: {email!r}")
         return 2

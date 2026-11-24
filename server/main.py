@@ -11,6 +11,7 @@ estático porque no contiene código.
 from __future__ import annotations
 
 import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
@@ -29,8 +30,28 @@ from models import User, get_db, init_db
 BASE_DIR = Path(__file__).resolve().parent
 SITE_DIR = BASE_DIR.parent
 
-# En producción definí NEXOIT_SECRET_KEY (sin valor por defecto inseguro).
-SECRET_KEY = os.environ.get("NEXOIT_SECRET_KEY", "nexoit-dev-insecure-secret-change-me")
+# --- Secret de sesión: fail fast fuera de desarrollo -------------------------
+# NEXOIT_SECRET_KEY es obligatoria. Única excepción: NEXOIT_ENV=dev (local),
+# que habilita un secreto de desarrollo con warning ruidoso.
+ENV = (os.environ.get("NEXOIT_ENV") or "").strip().lower()
+SECRET_KEY = (os.environ.get("NEXOIT_SECRET_KEY") or "").strip()
+
+if not SECRET_KEY:
+    if ENV == "dev":
+        SECRET_KEY = "nexoit-dev-insecure-secret-change-me"
+        print(
+            "WARNING: NEXOIT_ENV=dev sin NEXOIT_SECRET_KEY. "
+            "Usando un secreto de desarrollo inseguro; no exponer este proceso.",
+            file=sys.stderr,
+            flush=True,
+        )
+    else:
+        raise RuntimeError(
+            "NEXOIT_SECRET_KEY no está definida. Definí la variable de entorno "
+            "con un valor largo y aleatorio antes de arrancar "
+            "(o usá NEXOIT_ENV=dev para desarrollo local)."
+        )
+
 SESSION_MAX_AGE = 60 * 60 * 8  # 8 horas
 
 
@@ -88,6 +109,13 @@ def safe_next(next_url: str | None) -> str:
 
 @app.get("/", include_in_schema=False)
 def site_index() -> FileResponse:
+    return FileResponse(SITE_DIR / "index.html")
+
+
+@app.get("/index.html", include_in_schema=False)
+def site_index_explicit() -> FileResponse:
+    # Alias explícito: los links "Volver a NexoIT" apuntan a /index.html y
+    # ../index.html; bajo file:// funciona, bajo el server necesita esta ruta.
     return FileResponse(SITE_DIR / "index.html")
 
 
