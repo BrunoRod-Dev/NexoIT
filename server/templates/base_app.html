@@ -31,7 +31,16 @@
         {% if user %}
         <form class="nav__logout" method="post" action="/app/logout">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button class="btn btn--ghost btn--small" type="submit">Salir</button>
+          <button class="btn btn--ghost btn--small btn--icon" type="submit"
+                  aria-label="Cerrar sesión" title="Cerrar sesión">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
         </form>
         {% endif %}
       </nav>
