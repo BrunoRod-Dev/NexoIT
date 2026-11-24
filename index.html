@@ -192,6 +192,25 @@
         <p class="section__lead">Escribinos con una idea de lo que buscás y te respondemos con una propuesta concreta. Sin formularios eternos.</p>
       </div>
 
+      <form data-module="contacto-form" novalidate>
+        <div class="field">
+          <label class="field__label" for="consulta-nombre">Nombre</label>
+          <input class="field__input" type="text" id="consulta-nombre" name="nombre" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="consulta-email">Email</label>
+          <input class="field__input" type="email" id="consulta-email" name="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="consulta-mensaje">Consulta</label>
+          <textarea class="field__input" id="consulta-mensaje" name="mensaje" rows="5" required></textarea>
+        </div>
+        <button class="btn btn--primary" type="submit">Enviar consulta</button>
+        <p class="form-status" role="status" aria-live="polite"></p>
+      </form>
+
+      <p>¿Preferís directo? Escribinos o WhatsApp</p>
+
       <!-- TODO: reemplazar — email, WhatsApp y teléfono (JSON-LD) son placeholders -->
       <div class="contact__actions">
         <a class="btn btn--primary" href="mailto:hola@nexoit.com">Escribir a hola@nexoit.com</a>

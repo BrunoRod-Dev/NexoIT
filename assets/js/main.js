@@ -76,10 +76,66 @@
     });
   }
 
+  /* --- Módulo: contacto-form (POST /consultas) --------------------------- */
+
+  function initContactoForm(form) {
+    var status = form.querySelector('.form-status');
+    var submit = form.querySelector('[type="submit"]');
+    var sending = false;
+
+    function setStatus(kind, message) {
+      status.className = 'form-status' + (kind ? ' form-status--' + kind : '');
+      status.textContent = message;
+    }
+
+    function genericError() {
+      setStatus('error', 'No pudimos enviar tu consulta. Probá de nuevo o escribinos directo.');
+    }
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (sending) return;
+      sending = true;
+      if (submit) submit.disabled = true;
+
+      fetch('/consultas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: form.elements.nombre.value,
+          email: form.elements.email.value,
+          mensaje: form.elements.mensaje.value
+        })
+      })
+        .then(function (response) {
+          return response
+            .json()
+            .catch(function () { return null; })
+            .then(function (data) { return { response: response, data: data }; });
+        })
+        .then(function (result) {
+          if (result.response.status === 201) {
+            form.reset();
+            setStatus('ok', '¡Consulta enviada! Te respondemos a la brevedad.');
+          } else if (result.response.status === 400) {
+            setStatus('error', (result.data && result.data.error) || 'Revisá los datos ingresados.');
+          } else {
+            genericError();
+          }
+        })
+        .catch(genericError)
+        .then(function () {
+          sending = false;
+          if (submit) submit.disabled = false;
+        });
+    });
+  }
+
   /* --- Registry ---------------------------------------------------------- */
 
   var modules = {
-    header: initHeader
+    header: initHeader,
+    'contacto-form': initContactoForm
   };
 
   function boot() {

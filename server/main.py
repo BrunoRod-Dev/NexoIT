@@ -14,18 +14,18 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from fastapi import Depends, FastAPI, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 import auth
-from models import User, get_db, init_db
+from models import Consulta, User, get_db, init_db
 
 BASE_DIR = Path(__file__).resolve().parent
 SITE_DIR = BASE_DIR.parent
@@ -104,6 +104,16 @@ def safe_next(next_url: str | None) -> str:
     return "/app/perfil"
 
 
+def same_origin(request: Request) -> bool:
+    """Endpoint público sin cookie: si viene Origin/Referer, exigir mismo host."""
+    origin = request.headers.get("origin") or request.headers.get("referer")
+    if not origin:
+        return True
+    netloc = urlparse(origin).netloc
+    host = request.headers.get("host", "")
+    return bool(netloc) and netloc.lower() == host.lower()
+
+
 # --- Sitio estático (whitelist) --------------------------------------------
 
 
@@ -127,6 +137,58 @@ def site_grow() -> FileResponse:
 @app.get("/home/index.html", include_in_schema=False)
 def site_home() -> FileResponse:
     return FileResponse(SITE_DIR / "home" / "index.html")
+
+
+# --- Consultas desde el sitio (endpoint público) ---------------------------
+
+
+@app.post("/consultas", status_code=201)
+async def create_consulta(request: Request, db: Session = Depends(get_db)):
+    """Recibe una consulta del hub. Anónima o vinculada a la sesión actual."""
+    if not same_origin(request):
+        return JSONResponse(
+            {"ok": False, "error": "Origen no permitido."}, status_code=403
+        )
+
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Datos inválidos."}, status_code=400)
+    if not isinstance(data, dict):
+        return JSONResponse({"ok": False, "error": "Datos inválidos."}, status_code=400)
+
+    nombre = str(data.get("nombre") or "").strip()
+    email = auth.normalize_email(str(data.get("email") or ""))
+    mensaje = str(data.get("mensaje") or "").strip()
+
+    if len(nombre) < 2 or len(nombre) > 120:
+        return JSONResponse(
+            {"ok": False, "error": "El nombre debe tener entre 2 y 120 caracteres."},
+            status_code=400,
+        )
+    if not auth.valid_email(email):
+        return JSONResponse(
+            {"ok": False, "error": "Revisá el email: no parece válido."},
+            status_code=400,
+        )
+    if len(mensaje) < 10 or len(mensaje) > 2000:
+        return JSONResponse(
+            {"ok": False, "error": "El mensaje debe tener entre 10 y 2000 caracteres."},
+            status_code=400,
+        )
+
+    user = auth.current_user(request, db)
+    db.add(
+        Consulta(
+            nombre=nombre,
+            email=email,
+            mensaje=mensaje,
+            estado="nueva",
+            user_id=user.id if user is not None else None,
+        )
+    )
+    db.commit()
+    return JSONResponse({"ok": True}, status_code=201)
 
 
 # --- Área de clientes ------------------------------------------------------
@@ -229,6 +291,15 @@ def register_submit(
         return fail("Ya existe una cuenta con ese email. Probá ingresar.", status_code=409)
 
     user = auth.create_user(db, email=email, password=password, nombre=nombre, rol="cliente")
+
+    # Backfill: las consultas anónimas hechas con este email pasan a la cuenta.
+    db.execute(
+        update(Consulta)
+        .where(Consulta.email == user.email, Consulta.user_id.is_(None))
+        .values(user_id=user.id)
+    )
+    db.commit()
+
     auth.login_session(request, user)
     return RedirectResponse("/app/perfil", status_code=302)
 
@@ -237,8 +308,14 @@ def register_submit(
 def profile(
     request: Request,
     user: User = Depends(auth.require_auth),
+    db: Session = Depends(get_db),
 ):
-    return render(request, "perfil.html", user=user)
+    consultas = db.scalars(
+        select(Consulta)
+        .where(Consulta.user_id == user.id)
+        .order_by(Consulta.created_at.desc(), Consulta.id.desc())
+    ).all()
+    return render(request, "perfil.html", user=user, consultas=consultas)
 
 
 @app.get("/app/admin", response_class=HTMLResponse)
@@ -250,7 +327,32 @@ def admin(
     users = db.scalars(
         select(User).order_by(User.created_at.desc(), User.id.desc())
     ).all()
-    return render(request, "admin.html", user=user, users=users)
+    rows = db.execute(
+        select(Consulta, User)
+        .outerjoin(User, Consulta.user_id == User.id)
+        .order_by(Consulta.created_at.desc(), Consulta.id.desc())
+    ).all()
+    consultas = [(consulta, cuenta) for consulta, cuenta in rows]
+    return render(request, "admin.html", user=user, users=users, consultas=consultas)
+
+
+@app.post("/app/admin/consultas/{consulta_id}/leida")
+def mark_consulta_leida(
+    consulta_id: int,
+    request: Request,
+    csrf_token: str = Form(""),
+    user: User = Depends(auth.require_admin),
+    db: Session = Depends(get_db),
+):
+    if not auth.verify_csrf(request, csrf_token):
+        return HTMLResponse(
+            "<h1>400</h1><p>Token CSRF inválido.</p>", status_code=400
+        )
+    consulta = db.get(Consulta, consulta_id)
+    if consulta is not None:
+        consulta.estado = "leida"
+        db.commit()
+    return RedirectResponse("/app/admin", status_code=302)
 
 
 @app.post("/app/logout")

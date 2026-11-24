@@ -95,6 +95,43 @@
   font-weight: 600;
 }
 
+/* Lista de consultas (perfil y admin) */
+.app-list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-list__item {
+  padding-block-end: var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.app-list__item:last-child {
+  padding-block-end: 0;
+  border-block-end: 0;
+}
+
+.app-list__item .card__meta {
+  margin-block-end: var(--space-2);
+}
+
+.card form {
+  margin-block-start: var(--space-2);
+}
+
+.badge--nueva {
+  background-color: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge--leida {
+  background-color: rgba(230, 240, 255, 0.08);
+  color: var(--color-muted);
+}
+
 .app-dl {
   display: grid;
   grid-template-columns: minmax(6rem, auto) 1fr;

@@ -43,11 +43,12 @@ Themes (v2): `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --acc
 
 ### Clases disponibles (BEM-lite) — inventario v1.1
 
-- `.site-header` (`.site-header__inner`, `.site-header__brand`, `.nav`, `.nav__link`, `.nav__cta`, `.nav__toggle`, `.nav__dot`, `.nav__dot--grow`, `.nav__dot--home`) — `.nav__dot*` definidas en components.css y usadas en el header y hero del hub
+- `.site-header` (`.site-header__inner`, `.site-header__brand`, `.nav`, `.nav__link`, `.nav__link--account` (modificador del link de cuenta: separación y padding propios), `.nav__toggle`, `.nav__dot`, `.nav__dot--grow`, `.nav__dot--home`) — `.nav__dot*` definidas en components.css y usadas en el header y hero del hub
 - `.btn` (`.btn--primary`, `.btn--ghost`, `.btn--accent`, `.btn--grow`, `.btn--home`)
 - `.section` (`.section__head`, `.section__title`, `.section__lead`)
 - `.placeholder` (`.placeholder__title`, `.placeholder__text`)
 - `.contact` (`.contact__actions`)
+- `.field` (`.field__label`, `.field__input`) y `.form-status` (`.form-status--ok`, `.form-status--error`) — form de contacto del hub
 - `.site-footer` (`.site-footer__brand`, `.site-footer__links`, `.site-footer__legal`)
 - `.badge`
 - `.hero` (`.hero__title`, `.hero__subtitle`, `.hero__actions`, `.hero--split`, `.hero__visual`)
@@ -59,6 +60,8 @@ Themes (v2): `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --acc
 **Regla de diseño del header:** un solo relleno por pantalla (Hablemos); navegación y divisiones en links quietos con dot de color; cero botones en el header.
 
 `main.js` es un registry de `data-modules`; funciona igual si la página no tiene `data-modules` (importarlo no rompe nada).
+
+Módulos: `header` (estado de scroll) y `contacto-form` (`data-module="contacto-form"` en la sección `#contacto` del hub): intercepta el submit y hace `POST /consultas` con JSON `{nombre, email, mensaje}`, pintando el resultado en `.form-status` — **201** → `.form-status--ok` "¡Consulta enviada!" + `form.reset()`; **400** → `.form-status--error` con el mensaje del server; fallo de red/respuesta inesperada → error genérico local. Flujo: form → API `/consultas` → DB → perfil del usuario / admin. **Sin JS: el form no envía; mailto y WhatsApp siguen como base funcional** (conservados visibles como alternativa).
 
 ## Triggers de refactor acordados
 

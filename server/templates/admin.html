@@ -28,4 +28,39 @@
   </div>
   {% endif %}
 </section>
+
+<section class="section" aria-labelledby="admin-consultas-title">
+  <div class="section__head">
+    <p class="badge">Consultas</p>
+    <h2 class="section__title" id="admin-consultas-title">Consultas recibidas ({{ consultas|length }})</h2>
+    <p class="section__lead">Las consultas anónimas quedan “sin cuenta” hasta que la persona se registre con ese email.</p>
+  </div>
+
+  {% if consultas %}
+  <div class="cards">
+    {% for c, cuenta in consultas %}
+    <article class="card">
+      <p class="card__meta">
+        {{ c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else '—' }}
+        <span class="badge badge--{{ 'leida' if c.estado == 'leida' else 'nueva' }}">{{ 'leída' if c.estado == 'leida' else 'nueva' }}</span>
+      </p>
+      <h3 class="card__title">{{ c.nombre }}</h3>
+      <p class="card__text">{{ c.email }}</p>
+      <p class="card__meta">{% if cuenta %}Cuenta: {{ cuenta.email }}{% else %}Sin cuenta{% endif %}</p>
+      <p class="card__text">{{ c.mensaje }}</p>
+      {% if c.estado != 'leida' %}
+      <form method="post" action="/app/admin/consultas/{{ c.id }}/leida">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn--ghost btn--small" type="submit">Marcar leída</button>
+      </form>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <p class="card__text">Todavía no hay consultas.</p>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}

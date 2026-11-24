@@ -65,12 +65,29 @@ Abrir <http://127.0.0.1:8000/> (sitio) y <http://127.0.0.1:8000/app/registro>
 | GET/POST | `/app/registro` | alta abierta (nombre, email, password ≥ 8) |
 | GET/POST | `/app/login` | ingreso con cookie de sesión |
 | GET | `/app/perfil` | datos de cuenta (requiere sesión) |
-| GET | `/app/admin` | listado de usuarios (requiere rol admin) |
+| GET | `/app/admin` | listado de usuarios y consultas (requiere rol admin) |
+| POST | `/app/admin/consultas/{id}/leida` | marca una consulta como leída (admin, CSRF) |
+| POST | `/consultas` | consulta pública desde el sitio (JSON, sin CSRF) |
 | POST | `/app/logout` | cierra sesión y vuelve a `/` |
 | GET | `/static/app.css` | estilos de formularios (sólo server) |
 
 `/app` redirige a `/app/perfil`. Las rutas privadas sin sesión redirigen a
 `/app/login?next=<ruta original>` (sólo se aceptan rutas internas `/app/...`).
+
+### Consultas desde el sitio
+
+`POST /consultas` recibe JSON `{"nombre", "email", "mensaje"}`:
+
+| Caso | Respuesta |
+|---|---|
+| válida | **201** `{"ok": true}` |
+| nombre fuera de 2–120 / email inválido / mensaje fuera de 10–2000 | **400** `{"ok": false, "error": "…"}` |
+| `Origin` o `Referer` presente de otro host | **403** `{"ok": false, "error": "Origen no permitido."}` |
+
+- Con sesión activa la consulta queda vinculada a `user_id`; sin sesión, `NULL`.
+- Al registrarse un email, las consultas anónimas de ese email se **backfillean**
+  a la cuenta nueva (`UPDATE consultas SET user_id = … WHERE email = … AND user_id IS NULL`).
+- No usa CSRF cookie: el endpoint es público y la defensa es el chequeo de origen.
 
 ## Seguridad implementada
 
@@ -94,8 +111,9 @@ Abrir <http://127.0.0.1:8000/> (sitio) y <http://127.0.0.1:8000/app/registro>
 - **Verificación de email**: no hay envío SMTP; cualquier email con formato
   válido se acepta (verificación queda para una fase con proveedor de correo).
 - **Recuperación de contraseña**: no implementada.
-- **Rate limiting / bloqueo por intentos**: no implementado (recomendado antes
-  de exponer públicamente).
+- **Rate limiting / bloqueo por intentos**: no implementado. Crítico antes de
+  exponer `POST /consultas` (público) o el login a internet: hoy se puede
+  inundar la tabla de consultas sin fricción.
 - **Migraciones**: se usa `create_all`; para cambios de esquema conviene
   incorporar Alembic.
 - **SQLite**: sin WAL ni pool tuneado; suficiente para esta fase, no para alta

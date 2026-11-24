@@ -26,7 +26,21 @@
 
     <article class="card">
       <h2 class="card__title">Tus consultas</h2>
-      <p class="card__text">Próximamente: acá vas a ver el historial de consultas y solicitudes que envíes desde el sitio.</p>
+      {% if consultas %}
+      <ul class="app-list">
+        {% for c in consultas %}
+        <li class="app-list__item">
+          <p class="card__meta">
+            {{ c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else '—' }}
+            <span class="badge badge--{{ 'leida' if c.estado == 'leida' else 'nueva' }}">{{ 'leída' if c.estado == 'leida' else 'nueva' }}</span>
+          </p>
+          <p class="card__text">{{ c.mensaje }}</p>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="card__text">Todavía no hiciste consultas. Escribinos desde la <a href="/#contacto">página de contacto</a>.</p>
+      {% endif %}
     </article>
   </div>
 

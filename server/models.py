@@ -10,7 +10,15 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import DateTime, Integer, String, create_engine, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 # Ruta de la base: server/app.sqlite3 (override con NEXOIT_DB).
@@ -43,6 +51,27 @@ class User(Base):
 
     def __repr__(self) -> str:  # pragma: no cover - ayuda de depuración
         return f"<User {self.email} ({self.rol})>"
+
+
+class Consulta(Base):
+    """Consulta enviada desde el sitio (anónima o vinculada a una cuenta)."""
+
+    __tablename__ = "consultas"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    nombre: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    mensaje: Mapped[str] = mapped_column(Text, nullable=False)
+    estado: Mapped[str] = mapped_column(String(20), nullable=False, default="nueva")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - ayuda de depuración
+        return f"<Consulta {self.id} {self.email} ({self.estado})>"
 
 
 def init_db() -> None:

@@ -431,6 +431,67 @@ html.js .nav__toggle {
   margin-block-start: var(--space-5);
 }
 
+/* --- Form de contacto (módulo contacto-form) ---------------------------- */
+
+.contact form {
+  display: grid;
+  gap: var(--space-4);
+  max-inline-size: 36rem;
+  margin-block-start: var(--space-5);
+  margin-block-end: var(--space-5);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.field__label {
+  color: var(--color-muted); /* 7.30:1 sobre --color-bg (AA) */
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.field__input {
+  inline-size: 100%;
+  min-block-size: 2.75rem; /* 44px, coherente con .nav__link / .btn */
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.field__input:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+textarea.field__input {
+  min-block-size: 8rem;
+  resize: vertical;
+}
+
+.form-status {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.form-status:empty {
+  display: none;
+}
+
+.form-status--ok {
+  color: var(--accent-grow);
+}
+
+.form-status--error {
+  color: #f87171; /* error suave: ~6.8:1 sobre --color-bg, sin rojo chillón */
+}
+
 /* --- Footer -------------------------------------------------------------- */
 
 .site-footer {
