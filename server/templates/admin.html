@@ -1,0 +1,31 @@
+{% extends "base_app.html" %}
+{% block title %}Usuarios · NexoIT{% endblock %}
+
+{% block content %}
+<section class="section" aria-labelledby="admin-title">
+  <div class="section__head">
+    <p class="badge">Administración</p>
+    <h1 class="section__title" id="admin-title">Usuarios registrados</h1>
+    <p class="section__lead">
+      {{ users|length }} cuenta{{ '' if users|length == 1 else 's' }} en el área de clientes.
+    </p>
+  </div>
+
+  {% if users %}
+  <div class="cards">
+    {% for u in users %}
+    <article class="card">
+      <h2 class="card__title">{{ u.nombre }}</h2>
+      <p class="card__text">{{ u.email }}</p>
+      <p class="card__meta"><span class="badge">{{ u.rol }}</span></p>
+      <p class="card__meta">Alta: {{ u.created_at.strftime('%d/%m/%Y %H:%M') if u.created_at else '—' }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <p class="card__text">Todavía no hay usuarios registrados.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

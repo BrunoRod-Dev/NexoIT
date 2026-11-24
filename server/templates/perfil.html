@@ -1,0 +1,39 @@
+{% extends "base_app.html" %}
+{% block title %}Mi cuenta · NexoIT{% endblock %}
+
+{% block content %}
+<section class="section" aria-labelledby="perfil-title">
+  <div class="section__head">
+    <p class="badge">Mi cuenta</p>
+    <h1 class="section__title" id="perfil-title">Hola, {{ user.nombre }}</h1>
+    <p class="section__lead">Sesión iniciada como {{ user.email }}.</p>
+  </div>
+
+  <div class="cards">
+    <article class="card">
+      <h2 class="card__title">Datos de la cuenta</h2>
+      <dl class="app-dl">
+        <dt>Nombre</dt>
+        <dd>{{ user.nombre }}</dd>
+        <dt>Email</dt>
+        <dd>{{ user.email }}</dd>
+        <dt>Rol</dt>
+        <dd><span class="badge">{{ user.rol }}</span></dd>
+        <dt>Alta</dt>
+        <dd>{{ user.created_at.strftime('%d/%m/%Y') if user.created_at else '—' }}</dd>
+      </dl>
+    </article>
+
+    <article class="card">
+      <h2 class="card__title">Tus consultas</h2>
+      <p class="card__text">Próximamente: acá vas a ver el historial de consultas y solicitudes que envíes desde el sitio.</p>
+    </article>
+  </div>
+
+  {% if user.rol == 'admin' %}
+  <p class="form-actions">
+    <a class="btn btn--accent" href="/app/admin">Ver usuarios registrados</a>
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base_app.html" %}
+{% block title %}Ingresar · NexoIT{% endblock %}
+
+{% block content %}
+<section class="section" aria-labelledby="login-title">
+  <div class="section__head">
+    <p class="badge">Área de clientes</p>
+    <h1 class="section__title" id="login-title">Ingresar</h1>
+    <p class="section__lead">Accedé con el email y la contraseña de tu cuenta.</p>
+  </div>
+
+  <form class="card form-card" method="post" action="/app/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="next" value="{{ next_url }}">
+
+    {% if error %}
+    <p class="alert" role="alert">{{ error }}</p>
+    {% endif %}
+
+    <div class="field">
+      <label class="field__label" for="email">Email</label>
+      <input class="field__input" id="email" name="email" type="email"
+             autocomplete="email" inputmode="email" required
+             value="{{ email }}">
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="password">Contraseña</label>
+      <input class="field__input" id="password" name="password" type="password"
+             autocomplete="current-password" required minlength="8">
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn--primary" type="submit">Ingresar</button>
+      <a class="btn btn--ghost" href="/app/registro">Crear cuenta</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

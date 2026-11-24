@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NexoIT · Área de clientes{% endblock %}</title>
+  <meta name="description" content="Área de clientes de NexoIT.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-header__brand" href="/" aria-label="NexoIT, ir al inicio">
+        <img src="/assets/img/logo-nexoit.svg" alt="NexoIT" width="132" height="32">
+      </a>
+
+      <nav class="nav" aria-label="Área de clientes">
+        <a class="nav__link" href="/app/perfil">Mi cuenta</a>
+        {% if user and user.rol == 'admin' %}
+        <a class="nav__link" href="/app/admin">Usuarios</a>
+        {% endif %}
+        <a class="nav__link" href="/">← Volver al sitio</a>
+        {% if user %}
+        <form class="nav__logout" method="post" action="/app/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn--ghost btn--small" type="submit">Salir</button>
+        </form>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido" class="app-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__brand">
+      <img src="/assets/img/logo-nexoit.svg" alt="NexoIT" width="132" height="32">
+      <p>Área de clientes.</p>
+    </div>
+    <nav class="site-footer__links" aria-label="Familia Nexo">
+      <a href="/">NexoIT</a>
+      <a href="/grow/index.html">NexoGrow</a>
+      <a href="/home/index.html">NexoHome</a>
+    </nav>
+  </footer>
+</body>
+</html>
