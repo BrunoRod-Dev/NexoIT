@@ -59,7 +59,7 @@
   display: flex;
   flex-basis: 100%;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   padding-block-end: var(--space-3);
 }
 
@@ -70,9 +70,13 @@
 }
 
 .nav__link {
-  display: block;
-  padding-block: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+  padding-block: var(--space-1);
   color: var(--color-text);
+  font-size: 0.9375rem;
   font-weight: 500;
   text-decoration: none;
 }
@@ -81,11 +85,22 @@
   color: var(--accent);
 }
 
-.nav__cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding-block-start: var(--space-2);
+/* Puntito de color por división: marca, no botón. */
+.nav__dot {
+  display: inline-block;
+  flex: none;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--accent);
+}
+
+.nav__dot--grow {
+  background-color: var(--accent-grow);
+}
+
+.nav__dot--home {
+  background-color: var(--accent-home);
 }
 
 .nav__toggle {
@@ -510,13 +525,15 @@ html.js .nav__toggle {
     padding-block-end: 0;
   }
 
-  .nav__cta {
-    padding-block-start: 0;
-  }
-
   /* En desktop el toggle desaparece aunque JS lo haya habilitado. */
   html.js .nav__toggle {
     display: none;
+  }
+
+  /* Acceso a la app: fuera del grupo, con área de click y aire extra. */
+  .nav__link--account {
+    padding-inline: var(--space-3);
+    margin-inline-start: var(--space-2);
   }
 
   .split {

@@ -43,7 +43,7 @@ Themes (v2): `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --acc
 
 ### Clases disponibles (BEM-lite) — inventario v1.1
 
-- `.site-header` (`.site-header__inner`, `.site-header__brand`, `.nav`, `.nav__link`, `.nav__cta`, `.nav__toggle`)
+- `.site-header` (`.site-header__inner`, `.site-header__brand`, `.nav`, `.nav__link`, `.nav__cta`, `.nav__toggle`, `.nav__dot`, `.nav__dot--grow`, `.nav__dot--home`) — `.nav__dot*` definidas en components.css y usadas en el header y hero del hub
 - `.btn` (`.btn--primary`, `.btn--ghost`, `.btn--accent`, `.btn--grow`, `.btn--home`)
 - `.section` (`.section__head`, `.section__title`, `.section__lead`)
 - `.placeholder` (`.placeholder__title`, `.placeholder__text`)
@@ -55,6 +55,8 @@ Themes (v2): `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --acc
 - `.split`
 - `.steps` y `.step` (`.step__num`)
 - `.skip-link`
+
+**Regla de diseño del header:** un solo relleno por pantalla (Hablemos); navegación y divisiones en links quietos con dot de color; cero botones en el header.
 
 `main.js` es un registry de `data-modules`; funciona igual si la página no tiene `data-modules` (importarlo no rompe nada).
 
