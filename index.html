@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>NexoIT — Soluciones IT, domótica e IA aplicada</title>
+  <meta name="description" content="NexoIT es el hub de soluciones IT: webs y sistemas a medida, domótica e IoT, IA aplicada y soporte. NexoGrow para cultivo personalizado con IA, NexoHome para tu casa.">
+  <!-- TODO: reemplazar — theme-color provisional (acompaña la paleta v2) -->
+  <meta name="theme-color" content="#0b1220">
+
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="NexoIT — Soluciones IT, domótica e IA aplicada">
+  <meta property="og:description" content="Webs y sistemas a medida, domótica e IoT, IA aplicada y soporte continuo. Un solo equipo, de punta a punta.">
+  <meta property="og:type" content="website">
+  <!-- TODO: reemplazar — falta generar la imagen OG (1200×630) en assets/img/og-nexoit.png -->
+  <meta property="og:image" content="assets/img/og-nexoit.png">
+
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <script src="assets/js/main.js" defer></script>
+
+  <!-- TODO: reemplazar — teléfono (también JSON-LD) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "NexoIT",
+      "description": "Hub de soluciones IT: webs y sistemas a medida, domótica e IoT, IA aplicada y soporte. NexoGrow (cultivo personalizado con IA) y NexoHome (domótica).",
+      "email": "hola@nexoit.com",
+      "telephone": "+54 9 11 0000-0000",
+      "priceRange": "$$",
+      "areaServed": "AR"
+    }
+  </script>
+</head>
+
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <header class="site-header" data-module="header">
+    <div class="site-header__inner">
+      <a class="site-header__brand" href="index.html" aria-label="NexoIT, ir al inicio">
+        <img src="assets/img/logo-nexoit.svg" alt="NexoIT" width="132" height="32">
+      </a>
+
+      <button class="nav__toggle" type="button" data-toggle="menu" aria-controls="nav-principal" aria-expanded="false" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+        </svg>
+      </button>
+
+      <nav class="nav" id="nav-principal" aria-label="Principal">
+        <a class="nav__link" href="#servicios">Servicios</a>
+        <a class="nav__link" href="#proceso">Proceso</a>
+        <a class="nav__link" href="#contacto">Contacto</a>
+        <div class="nav__cta">
+          <a class="btn btn--accent btn--grow" href="grow/index.html">NexoGrow</a>
+          <a class="btn btn--accent btn--home" href="home/index.html">NexoHome</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <!-- Hero -->
+    <section class="hero hero--split" aria-labelledby="hero-title">
+      <p class="badge">Hub de soluciones IT</p>
+      <h1 class="hero__title" id="hero-title">Toda tu tecnología, en un solo lugar.</h1>
+      <p class="hero__subtitle">Webs y sistemas a medida · Domótica e IoT · IA aplicada · Soporte continuo. Un solo equipo, de punta a punta.</p>
+      <div class="hero__actions">
+        <!-- TODO: reemplazar — email de contacto placeholder -->
+        <a class="btn btn--primary" href="mailto:hola@nexoit.com">Hablemos</a>
+        <a class="btn btn--accent btn--grow" href="grow/index.html">NexoGrow</a>
+        <a class="btn btn--accent btn--home" href="home/index.html">NexoHome</a>
+      </div>
+      <img class="hero__visual" src="assets/img/hero-familia.svg" alt="" width="800" height="600" decoding="async">
+    </section>
+
+    <!-- Servicios -->
+    <section class="section" id="servicios" aria-labelledby="servicios-title">
+      <div class="section__head">
+        <h2 class="section__title" id="servicios-title">Qué hacemos</h2>
+        <p class="section__lead">Un solo equipo para todo lo técnico: desde la web que te representa hasta el riego automático de tu huerta.</p>
+      </div>
+
+      <div class="cards">
+        <article class="card">
+          <span class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 8l-4 4 4 4M15 8l4 4-4 4M13 6l-2 12"/>
+            </svg>
+          </span>
+          <h3 class="card__title">Webs y sistemas a medida</h3>
+          <p class="card__text">Sitios rápidos, tiendas y herramientas internas diseñadas para cómo trabaja tu equipo de verdad.</p>
+        </article>
+
+        <article class="card">
+          <span class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6" cy="6" r="2"/>
+              <circle cx="6" cy="18" r="2"/>
+              <circle cx="18" cy="12" r="2"/>
+              <path d="M8 7l8 4M8 17l8-4"/>
+            </svg>
+          </span>
+          <h3 class="card__title">IA aplicada</h3>
+          <p class="card__text">Visión por computadora, datos y automatización: del sensor a la decisión, sin intervención manual.</p>
+        </article>
+
+        <article class="card">
+          <span class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/>
+            </svg>
+          </span>
+          <h3 class="card__title">Domótica e IoT</h3>
+          <p class="card__text">Hogar y cultivo: luces, clima, accesos, riego y sensores conectados en una sola app, sin obra ni complicaciones.</p>
+        </article>
+
+        <article class="card">
+          <span class="card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          </span>
+          <h3 class="card__title">Soporte y mantenimiento</h3>
+          <p class="card__text">Actualizaciones, backups y respuesta cuando algo falla. Tu web, tu red o tu invernadero siguen andando.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Divisiones -->
+    <section class="section" id="divisiones" aria-labelledby="divisiones-title">
+      <div class="section__head">
+        <h2 class="section__title" id="divisiones-title">Dos caminos, un mismo estándar</h2>
+        <p class="section__lead">Elegí la división que mejor encaja con lo que necesitás. Comparten equipo, criterio y forma de trabajar.</p>
+      </div>
+
+      <div class="split">
+        <article class="card card--grow">
+          <p class="badge">División</p>
+          <h3 class="card__title">NexoGrow · Cultivo personalizado con IA</h3>
+          <p class="card__text">Huerta inteligente con riego y nutrientes automatizados, visión por IA y alertas en tu celular.</p>
+          <p class="card__text">Sensores, dosificación A/B y un dashboard que muestra el estado del cultivo en tiempo real.</p>
+          <a class="btn btn--accent" href="grow/index.html">Explorar</a>
+        </article>
+
+        <article class="card card--home">
+          <p class="badge">División</p>
+          <h3 class="card__title">NexoHome</h3>
+          <p class="card__text">Para hogares que quieren tecnología simple de usar. Domótica, redes y soporte con instalación cuidada.</p>
+          <p class="card__text">Configuramos todo y te dejamos el sistema funcionando, explicado y sin vueltas.</p>
+          <a class="btn btn--accent" href="home/index.html">Explorar</a>
+        </article>
+      </div>
+    </section>
+
+    <!-- Proceso -->
+    <section class="section" id="proceso" aria-labelledby="proceso-title">
+      <div class="section__head">
+        <h2 class="section__title" id="proceso-title">Cómo trabajamos</h2>
+        <p class="section__lead">Tres etapas, sin pasos de más: entender, diseñar y sostener lo que entregamos.</p>
+      </div>
+
+      <ol class="steps">
+        <li class="step">
+          <span class="step__num" aria-hidden="true">01</span>
+          <h3>Entendemos</h3>
+          <p>Escuchamos el problema real, medimos el terreno y definimos qué hace falta (y qué no).</p>
+        </li>
+        <li class="step">
+          <span class="step__num" aria-hidden="true">02</span>
+          <h3>Diseñamos</h3>
+          <p>Proponemos una solución concreta con alcance, tiempos y costo claros antes de escribir código.</p>
+        </li>
+        <li class="step">
+          <span class="step__num" aria-hidden="true">03</span>
+          <h3>Entregamos y acompañamos</h3>
+          <p>Implementamos, probamos con vos y quedamos cerca para que todo siga funcionando.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Contacto -->
+    <section class="section contact" id="contacto" aria-labelledby="contacto-title">
+      <div class="section__head">
+        <h2 class="section__title" id="contacto-title">Contanos qué necesitás</h2>
+        <p class="section__lead">Escribinos con una idea de lo que buscás y te respondemos con una propuesta concreta. Sin formularios eternos.</p>
+      </div>
+
+      <!-- TODO: reemplazar — email, WhatsApp y teléfono (JSON-LD) son placeholders -->
+      <div class="contact__actions">
+        <a class="btn btn--primary" href="mailto:hola@nexoit.com">Escribir a hola@nexoit.com</a>
+        <a class="btn btn--ghost" href="https://wa.me/5491100000000">Escribir por WhatsApp</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__brand">
+      <img src="assets/img/logo-nexoit.svg" alt="NexoIT" width="132" height="32">
+      <p>Soluciones IT: web, domótica e IA aplicada.</p>
+    </div>
+
+    <nav class="site-footer__links" aria-label="Familia Nexo">
+      <a href="index.html">NexoIT</a>
+      <a href="grow/index.html">NexoGrow</a>
+      <a href="home/index.html">NexoHome</a>
+    </nav>
+
+    <p class="site-footer__legal">© 2026 NexoIT</p>
+  </footer>
+</body>
+</html>

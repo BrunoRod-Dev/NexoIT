@@ -1,0 +1,550 @@
+/* ==========================================================================
+   NexoIT · componentes (BEM-lite)
+   Contrato v1. Convención: .bloque__elemento y .bloque--modificador.
+   Mobile-first. Un único breakpoint de layout al final del archivo (48rem).
+   Sin position: absolute para contenido: el layout no depende del copy.
+   ========================================================================== */
+
+/* --- Contenedores --------------------------------------------------------
+   Hero, secciones, barra del header y footer comparten ancho, gutter y
+   centrado. Cada bloque decide su ritmo vertical por separado. */
+.hero,
+.section,
+.site-header__inner,
+.site-footer {
+  inline-size: 100%;
+  max-inline-size: var(--width-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* --- Header -------------------------------------------------------------- */
+
+.site-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  background-color: var(--color-bg-blur);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-block-end: 1px solid var(--color-border);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Estado de scroll que aplica main.js (data-module="header"). */
+.site-header.is-scrolled {
+  box-shadow: var(--shadow);
+}
+
+.site-header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  min-block-size: var(--header-h);
+  padding-block: var(--space-3);
+}
+
+.site-header__brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.site-header__brand img {
+  inline-size: 8.25rem;
+}
+
+.nav {
+  display: flex;
+  flex-basis: 100%;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-end: var(--space-3);
+}
+
+/* Con JS el menú arranca colapsado en móvil (ver main.js). Sin JS no existe
+   el atributo y la navegación queda visible: la página funciona igual. */
+:where(html[data-menu="closed"]) .nav {
+  display: none;
+}
+
+.nav__link {
+  display: block;
+  padding-block: var(--space-2);
+  color: var(--color-text);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nav__link:hover {
+  color: var(--accent);
+}
+
+.nav__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block-start: var(--space-2);
+}
+
+.nav__toggle {
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  margin-inline-start: auto;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+}
+
+.nav__toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.nav__toggle[aria-expanded="true"] {
+  background-color: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+/* El botón solo existe visualmente si JS está disponible. */
+html.js .nav__toggle {
+  display: inline-flex;
+}
+
+/* --- Botones ------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.btn--primary {
+  background-color: var(--color-text);
+  color: var(--color-bg);
+}
+
+.btn--primary:hover {
+  background-color: #cbd5e1;
+  color: var(--color-bg);
+}
+
+.btn--ghost {
+  background-color: transparent;
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.btn--ghost:hover {
+  background-color: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn--accent {
+  background-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.btn--accent:hover {
+  background-color: var(--accent-strong);
+  color: var(--accent-contrast);
+}
+
+/* Variantes de acento por división (reusan el token --accent del botón). */
+.btn--grow {
+  --accent: var(--accent-grow);
+  --accent-strong: var(--accent-grow-strong);
+  --accent-soft: var(--accent-grow-soft);
+  --accent-contrast: #052e12;
+}
+
+.btn--home {
+  --accent: var(--accent-home);
+  --accent-strong: var(--accent-home-strong);
+  --accent-soft: var(--accent-home-soft);
+  --accent-contrast: #0a1e3f;
+}
+
+/* --- Badge --------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  align-self: flex-start;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background-color: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* --- Hero ---------------------------------------------------------------- */
+
+.hero {
+  padding-block: clamp(var(--space-6), 9vw, var(--space-8))
+    clamp(var(--space-6), 7vw, var(--space-7));
+  /* Glow radial teal: CSS puro (sin imágenes, sin pseudo-elementos). */
+  background-image: radial-gradient(
+    70% 85% at 15% 0%,
+    var(--accent-soft),
+    transparent 70%
+  );
+}
+
+.hero__title {
+  max-inline-size: 20ch;
+  margin-block-end: var(--space-4);
+}
+
+.hero__subtitle {
+  max-inline-size: 54ch;
+  margin-block-end: var(--space-6);
+  color: var(--color-muted);
+  font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* --- Hero con visual (split) ---------------------------------------------
+   Mobile: una columna (texto y luego visual). Desktop: 2 columnas dentro del
+   breakpoint existente de 48rem. Sin media queries nuevas. */
+.hero--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  column-gap: var(--space-7);
+}
+
+.hero--split > * {
+  grid-column: 1;
+}
+
+.hero__visual {
+  inline-size: 100%;
+  max-inline-size: 32rem;
+  height: auto;
+  margin-block-start: var(--space-6);
+  margin-inline: auto;
+}
+
+/* --- Sección ------------------------------------------------------------- */
+
+.section {
+  padding-block: clamp(var(--space-6), 6vw, var(--space-8));
+}
+
+.section__head {
+  max-inline-size: 46rem;
+  margin-block-end: var(--space-6);
+}
+
+.section__title {
+  margin-block-end: var(--space-2);
+}
+
+.section__lead {
+  margin-block-end: 0;
+  color: var(--color-muted);
+  font-size: 1.0625rem;
+}
+
+/* --- Grid de tarjetas (helper de layout del hub) ------------------------- */
+
+.cards {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+
+/* --- Card ---------------------------------------------------------------- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Hover/foco: borde de acento + glow muy sutil. Sin sombras claras. */
+.card:hover,
+.card:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 28px -8px var(--accent-soft);
+}
+
+.card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  margin-block-end: var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-soft);
+  color: var(--accent);
+}
+
+.card__icon svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.card__title {
+  margin-block-end: var(--space-1);
+  font-size: 1.0625rem;
+}
+
+.card__text {
+  margin-block-end: 0;
+  color: var(--color-muted);
+}
+
+/* CTA de tarjeta siempre al pie, alineado entre tarjetas de distinto copy. */
+.card > .btn {
+  align-self: flex-start;
+  margin-block-start: auto;
+}
+
+.card--grow {
+  --accent: var(--accent-grow);
+  --accent-strong: var(--accent-grow-strong);
+  --accent-soft: var(--accent-grow-soft);
+  --accent-contrast: #052e12;
+}
+
+.card--home {
+  --accent: var(--accent-home);
+  --accent-strong: var(--accent-home-strong);
+  --accent-soft: var(--accent-home-soft);
+  --accent-contrast: #0a1e3f;
+}
+
+.card--grow,
+.card--home {
+  border-block-start: 3px solid var(--accent);
+}
+
+/* --- Split (2 columnas → 1 en móvil) ------------------------------------- */
+
+.split {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+
+/* --- Pasos --------------------------------------------------------------- */
+
+.steps {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+  margin-block: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  padding: var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.step__num {
+  display: inline-block;
+  margin-block-end: var(--space-3);
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.step h3 {
+  margin-block-end: var(--space-2);
+}
+
+.step p {
+  margin-block-end: 0;
+  color: var(--color-muted);
+}
+
+/* --- Contacto ------------------------------------------------------------ */
+
+.contact {
+  padding-block-end: clamp(var(--space-7), 8vw, var(--space-8));
+}
+
+.contact__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+}
+
+/* --- Footer -------------------------------------------------------------- */
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-block-start: var(--space-6);
+  padding-block: var(--space-6) var(--space-7);
+  border-block-start: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+
+.site-footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.site-footer__brand img {
+  inline-size: 7.5rem;
+}
+
+.site-footer__brand p {
+  margin: 0;
+}
+
+.site-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+.site-footer__links a {
+  color: var(--color-text);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.site-footer__links a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.site-footer__legal {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+/* --- Placeholder (páginas de división en construcción) ------------------- */
+
+.placeholder {
+  max-inline-size: 40rem;
+  padding: var(--space-6);
+  background-color: var(--color-surface);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+.placeholder__title {
+  margin-block-end: var(--space-2);
+}
+
+.placeholder__text {
+  margin-block-end: 0;
+  color: var(--color-muted);
+}
+
+/* ==========================================================================
+   Único breakpoint de layout: 48rem (768px)
+   ========================================================================== */
+
+@media (min-width: 48rem) {
+  .site-header__inner {
+    flex-wrap: nowrap;
+    gap: var(--space-5);
+  }
+
+  /* `display: flex` también neutraliza el estado colapsado del móvil
+     (:where(html[data-menu="closed"]) .nav) porque esta regla va después. */
+  .nav {
+    display: flex;
+    flex-basis: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-5);
+    margin-inline-start: auto;
+    padding-block-end: 0;
+  }
+
+  .nav__cta {
+    padding-block-start: 0;
+  }
+
+  /* En desktop el toggle desaparece aunque JS lo haya habilitado. */
+  html.js .nav__toggle {
+    display: none;
+  }
+
+  .split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .section__head {
+    margin-block-end: var(--space-7);
+  }
+
+  .hero__actions {
+    gap: var(--space-4);
+  }
+
+  .hero--split {
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+    align-items: center;
+    column-gap: var(--space-8);
+  }
+
+  .hero--split > .hero__visual {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    max-inline-size: 34rem;
+    margin-block-start: 0;
+  }
+}

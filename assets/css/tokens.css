@@ -1,0 +1,74 @@
+/* ==========================================================================
+   NexoIT · Design tokens (contrato v2 — deep tech dark)
+   Fuente única de verdad visual del hub. Mobile-first.
+   Los nombres y valores de las variables del contrato no se renombran:
+   otro agente y el reviewer dependen de ellos.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* --- Color base (deep tech dark) ---------------------------------------- */
+  --color-bg: #0b1220;
+  --color-surface: #111a2c;
+  --color-text: #e8eef7;
+  --color-muted: #94a3b8;
+  --color-border: rgba(230,240,255,.09);
+  --color-border-strong: rgba(230,240,255,.38);
+
+  /* --- Acento del hub: teal ----------------------------------------------- */
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --accent-soft: rgba(45,212,191,.12);
+  --accent-contrast: #04211d;
+
+  /* --- Acentos de división (body.theme--grow / body.theme--home) ---------- */
+  --accent-grow: #4ade80;
+  --accent-grow-strong: #22c55e;
+  --accent-grow-soft: rgba(74,222,128,.12);
+  --accent-home: #60a5fa;
+  --accent-home-strong: #3b82f6;
+  --accent-home-soft: rgba(96,165,250,.12);
+
+  /* --- Tipografía: stack de sistema completa (cero requests) -------------- */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", "Liberation Sans", sans-serif;
+
+  /* --- Espacio (base 4px) -------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* --- Forma --------------------------------------------------------------- */
+  --radius: 0.75rem;
+  --shadow: 0 1px 0 rgb(255 255 255 / 4%), 0 18px 40px -32px rgb(0 0 0 / 90%);
+
+  /* --- Layout (extras de apoyo, no forman parte del contrato) -------------- */
+  --radius-sm: 0.5rem;
+  --width-max: 68rem;
+  --gutter: clamp(1rem, 4vw, 2rem);
+  --header-h: 4rem;
+  /* Fondo del header sticky: mismo tono que --color-bg con alfa para el blur. */
+  --color-bg-blur: rgba(11,18,32,.72);
+}
+
+/* Temas de división: misma estructura, acento distinto.
+   Uso: <body class="theme--grow"> en grow/ · <body class="theme--home"> en home/ */
+body.theme--grow {
+  --accent: var(--accent-grow);
+  --accent-strong: var(--accent-grow-strong);
+  --accent-soft: var(--accent-grow-soft);
+  --accent-contrast: #052e12;
+}
+
+body.theme--home {
+  --accent: var(--accent-home);
+  --accent-strong: var(--accent-home-strong);
+  --accent-soft: var(--accent-home-soft);
+  --accent-contrast: #0a1e3f;
+}

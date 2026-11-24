@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <title>Familia frente a paneles de casa, cultivo y tecnología</title>
+  <defs>
+    <radialGradient id="glowTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#2dd4bf" stop-opacity=".16"/>
+      <stop offset=".55" stop-color="#2dd4bf" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#2dd4bf" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="haloBlue" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#60a5fa" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="haloGreen" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#4ade80" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#4ade80" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="haloTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#2dd4bf" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#2dd4bf" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="figure" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b3d5f"/>
+      <stop offset="1" stop-color="#16233a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Glow general y halos por panel -->
+  <ellipse cx="560" cy="250" rx="250" ry="200" fill="url(#glowTeal)"/>
+  <ellipse cx="450" cy="205" rx="150" ry="150" fill="url(#haloBlue)"/>
+  <ellipse cx="625" cy="150" rx="150" ry="145" fill="url(#haloGreen)"/>
+  <ellipse cx="600" cy="370" rx="160" ry="150" fill="url(#haloTeal)"/>
+
+  <!-- Piso -->
+  <ellipse cx="250" cy="556" rx="190" ry="14" fill="#2dd4bf" fill-opacity=".08"/>
+
+  <!-- Panel: casa -->
+  <g transform="translate(450 200) rotate(-7)">
+    <rect x="-66" y="-78" width="132" height="156" rx="20" fill="#111a2c" fill-opacity=".9" stroke="#60a5fa" stroke-opacity=".45"/>
+    <g fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-26 -4 L0 -26 L26 -4 V26 H-26 Z"/>
+      <path d="M-7 26 V9 H7 V26"/>
+    </g>
+  </g>
+
+  <!-- Panel: planta -->
+  <g transform="translate(625 150) rotate(5)">
+    <rect x="-70" y="-82" width="140" height="164" rx="20" fill="#111a2c" fill-opacity=".9" stroke="#4ade80" stroke-opacity=".45"/>
+    <g fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 30 V-2"/>
+      <path d="M0 8 C-16 4 -20 -10 -8 -16 C-3 -9 -1 0 0 8 Z"/>
+      <path d="M0 18 C16 14 20 0 8 -6 C3 1 1 10 0 18 Z"/>
+      <path d="M-11 30 H11"/>
+    </g>
+  </g>
+
+  <!-- Panel: laptop y circuito -->
+  <g transform="translate(600 370) rotate(-4)">
+    <rect x="-75" y="-85" width="150" height="170" rx="20" fill="#111a2c" fill-opacity=".9" stroke="#2dd4bf" stroke-opacity=".45"/>
+    <g fill="none" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="-26" y="-28" width="52" height="38" rx="5"/>
+      <path d="M-36 22 H36 L30 28 H-30 Z"/>
+      <path d="M-13 -16 H-4 V-6 H8 V4"/>
+      <circle cx="11" cy="7" r="2.5"/>
+      <circle cx="-16" cy="-19" r="2.5"/>
+    </g>
+  </g>
+
+  <!-- Familia de espaldas (sin caras). Escalada sobre la línea de piso. -->
+  <g transform="translate(240 556) scale(1.18) translate(-240 -556)">
+    <g fill="url(#figure)">
+      <circle cx="140" cy="366" r="20"/>
+      <path d="M108 402 Q140 390 172 402 L177 505 L171 556 H147 L140 518 L133 556 H109 L103 505 Z"/>
+      <circle cx="212" cy="372" r="19"/>
+      <path d="M182 406 Q212 394 242 406 L247 505 L241 556 H219 L212 520 L205 556 H183 L177 505 Z"/>
+      <circle cx="242" cy="378" r="9"/>
+      <circle cx="284" cy="450" r="14"/>
+      <path d="M266 472 Q284 466 302 472 L305 520 L301 556 H289 L284 534 L279 556 H269 L263 520 Z"/>
+      <ellipse cx="344" cy="520" rx="30" ry="16"/>
+      <circle cx="376" cy="510" r="11"/>
+      <path d="M384 500 l 8 -8 l 2 11 z"/>
+      <rect x="328" y="530" width="7" height="22" rx="3"/>
+      <rect x="354" y="530" width="7" height="22" rx="3"/>
+    </g>
+    <path d="M316 518 q -14 -4 -18 -16" fill="none" stroke="#22324e" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Rim light tenue del lado de los paneles -->
+    <g fill="none" stroke="#2dd4bf" stroke-opacity=".5" stroke-width="2.4" stroke-linecap="round">
+      <path d="M156 352 A20 20 0 0 1 156 384"/>
+      <path d="M167 408 Q173 415 175 431"/>
+      <path d="M226 358 A19 19 0 0 1 226 390"/>
+      <path d="M247 371 A9 9 0 0 1 247 385"/>
+      <path d="M294 440 A14 14 0 0 1 294 462"/>
+      <path d="M381 503 A11 11 0 0 1 383 516"/>
+    </g>
+  </g>
+</svg>

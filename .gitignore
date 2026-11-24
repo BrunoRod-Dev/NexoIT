@@ -1,0 +1,9 @@
+# Datos locales / artefactos (no aplican al sitio actual)
+*.sqlite3
+*.sqlite
+__pycache__/
+.venv/
+venv/
+.env
+.DS_Store
+Thumbs.db
