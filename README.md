@@ -6,7 +6,7 @@
 
 - **NexoGrow** (`grow/`) — huerta inteligente: cámaras y sensores, riego y dosificación de nutrientes A/B automatizados, monitoreo 24/7 y dashboard web; funciona sin internet. Hoy en fase piloto.
 - **NexoHome** (`home/`) — domótica simple y confiable: iluminación, clima, seguridad, rutinas y consumo desde el celular.
-- **Configurador 3D** (`home/configurador/`) — público, sin cuenta: dos casas modelo con toggles por categoría y panel resumen, en 3D desde el navegador.
+- **Configurador 3D** (`home/configurador/`) — room builder anónimo y sin cuenta: 3 templates de partida, editor 2D con preview 3D en vivo y sugerencias por ambiente.
 
 El hub (`index.html`) es la única puerta de entrada: desde ahí se navega a cada división y de vuelta. Las divisiones no se enlazan entre sí.
 
@@ -22,7 +22,7 @@ NexoIT/
 ├── home/
 │   ├── index.html              # Landing NexoHome
 │   └── configurador/
-│       └── index.html          # Configurador 3D (F0/F1)
+│       └── index.html          # Configurador 3D (room builder)
 ├── assets/
 │   ├── css/                    # tokens.css · base.css · components.css
 │   ├── js/                     # main.js (registry) · configurador.js
@@ -104,12 +104,19 @@ Themes: `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --accent: 
 - **JSON-LD:** en el hub (con teléfono placeholder) y `WebPage` por división con `url` absoluta.
 - **Regla de dominio:** si cambia el dominio → actualizar `sitemap.xml`, `robots.txt`, `og:url` y `og:image` (ver pendientes).
 
-## Fases futuras
+## Configurador 3D
 
-- **F2:** upload de plano propio + guardar diseño con cuenta.
-- **F3:** selección de lo configurado → consulta automática en el admin.
+El configurador evolucionó de "casas modelo" a **room builder**: 3 templates de partida (depto, casa, desde cero), editor 2D en DOM + preview 3D data-driven y un motor de sugerencias por tipo de ambiente (tabla de automatización recomendada). Anónimo y sin cuenta: el borrador vive en `localStorage` (`nexo-casa-draft`) y el estado se lee con `window.nexoConfigurador.getState()`.
 
-### Pendientes (TODOs)
+**Clases page-scoped del builder** (definidas en el `<style>` de `home/configurador/index.html`, mismo patrón que `.flow*`; no integran el inventario del contrato): `.builder-step*`, `.template-*`, `.builder-grid/.builder-plan/.plan*`, `.room*` (+ colores por `data-tipo`), `.palette*`, `.props*`, `.suggest*`, `.totals`, `.config-cta/.config-teaser`, `.draft-hint`, `body.is-dragging`; con una MQ propia `min-width: 62rem`.
+
+### Roadmap
+
+- **F2b:** subir tu plano como base del editor (teaser en la landing).
+- **F2c:** importación DXF automática (con `ezdxf`).
+- **F3:** guardar diseño con cuenta + consulta estructurada en el admin.
+
+## Pendientes (TODOs)
 
 - [ ] Dominio final: actualizar `sitemap.xml`, `robots.txt`, `og:url` y `og:image` a URLs absolutas (hoy rutas relativas + URL predecible de Pages; WhatsApp y otros scrapers requieren absolutas).
 - [ ] Email real (hoy: `hola@nexoit.com` de ejemplo).

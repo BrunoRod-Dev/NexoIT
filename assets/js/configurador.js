@@ -1,451 +1,930 @@
-/* NexoHome · configurador 3D (vanilla sobre three r147 vendorizado).
-   Sin dependencias externas ni red. Expone window.nexoConfigurador para
-   diagnóstico y una futura integración F2 (guardar diseño con cuenta). */
+/* NexoHome · configurador / room builder (vanilla sobre three r147 vendorizado).
+   Editor 2D + preview 3D en vivo + sugerencias por ambiente + draft anónimo.
+   Sin dependencias extra ni red. Expone window.nexoConfigurador (F3 lo usará). */
 (function () {
   'use strict';
 
   var container = document.getElementById('config-canvas');
-  var panel = document.getElementById('config-panel');
-  if (!container || !panel || !window.THREE) return;
+  var plan = document.getElementById('plan');
+  if (!container || !plan || !window.THREE) return;
 
   var REDUCED = window.matchMedia
     ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
     : false;
 
-  var CATS = [
-    {
-      id: 'iluminacion',
-      label: 'Iluminación',
-      hex: '#2dd4bf',
-      desc: 'Luces LED regulables por ambiente, con escenas y control desde el celular.'
-    },
-    {
-      id: 'clima',
-      label: 'Climatización',
-      hex: '#60a5fa',
-      desc: 'Aire y calefacción con termostato inteligente, horarios y zonas.'
-    },
-    {
-      id: 'seguridad',
-      label: 'Seguridad',
-      hex: '#f87171',
-      desc: 'Cámaras, sensores de apertura y alertas en el celular.'
-    },
-    {
-      id: 'energia',
-      label: 'Energía',
-      hex: '#4ade80',
-      desc: 'Tablero inteligente, panel solar y batería para cortes de luz.'
-    }
-  ];
+  var STORAGE_KEY = 'nexo-casa-draft';
+  var AREA = { w: 12, d: 10, step: 0.5, min: 1.5, wallH: 1.1 };
 
-  var PRESETS = {
-    depto: {
-      id: 'depto',
-      w: 10,
-      d: 7,
-      partitions: [
-        { x: 1.0, z: -2.0, len: 3.0, axis: 'z' },
-        { x: 1.0, z: 2.0, len: 3.0, axis: 'z' }
-      ],
-      lights: [
-        [-3.4, -1.8], [-3.4, 1.8], [-1.0, 0],
-        [3.1, -1.9], [3.1, 1.9], [3.1, 0]
-      ],
-      clima: [
-        [-3.2, 2.3, 0],
-        [3.0, -2.3, Math.PI]
-      ],
-      cameras: [
-        [-4.4, -2.9, 0.7],
-        [4.4, -2.9, -0.7]
-      ],
-      sensors: [
-        [3.9, 3.3]
-      ]
-    },
-    casa: {
-      id: 'casa',
-      w: 14,
-      d: 10,
-      partitions: [
-        { x: -1.4, z: -3.0, len: 4.0, axis: 'z' },
-        { x: -1.4, z: 3.0, len: 4.0, axis: 'z' },
-        { x: 0.8, z: 1.4, len: 4.0, axis: 'x' },
-        { x: 4.8, z: 1.4, len: 2.4, axis: 'x' },
-        { x: 4.2, z: -1.8, len: 3.2, axis: 'z' }
-      ],
-      lights: [
-        [-5.6, -3.0], [-5.6, 1.6], [-3.4, -3.0], [-3.4, 1.6],
-        [-0.2, -2.6], [-0.2, 0.2], [2.6, -3.0], [2.6, -0.4],
-        [5.4, -3.2], [5.4, 3.4]
-      ],
-      clima: [
-        [-5.6, 3.6, 0],
-        [-0.2, -4.0, Math.PI],
-        [2.6, 3.6, Math.PI],
-        [5.4, -0.2, -Math.PI / 2]
-      ],
-      cameras: [
-        [-6.4, -4.4, 0.6],
-        [6.4, -4.4, -0.6],
-        [6.4, 4.4, -2.4]
-      ],
-      sensors: [
-        [-6.4, 4.4],
-        [0, -4.6]
-      ]
-    }
+  var CATS = {
+    iluminacion: { label: 'Iluminación', hex: '#2dd4bf', color: 0x2dd4bf },
+    clima: { label: 'Clima', hex: '#60a5fa', color: 0x60a5fa },
+    seguridad: { label: 'Seguridad', hex: '#f87171', color: 0xf87171 },
+    energia: { label: 'Energía', hex: '#4ade80', color: 0x4ade80 }
+  };
+  var CAT_ORDER = ['iluminacion', 'clima', 'seguridad', 'energia'];
+
+  var TIPOS = {
+    dormitorio: { label: 'Dormitorio', w: 3.5, h: 3.5, color: 0x60a5fa },
+    living: { label: 'Living-Comedor', w: 5, h: 4, color: 0x2dd4bf },
+    cocina: { label: 'Cocina', w: 3, h: 2.5, color: 0x4ade80 },
+    bano: { label: 'Baño', w: 2, h: 2, color: 0x38bdf8 },
+    oficina: { label: 'Oficina', w: 2.5, h: 2.5, color: 0xa78bfa },
+    garage: { label: 'Garage', w: 3.5, h: 5, color: 0x94a3b8 },
+    exterior: { label: 'Exterior', w: 4, h: 3, color: 0xfbbf24 }
+  };
+
+  var SUGERENCIAS = {
+    dormitorio: [
+      { key: 'dorm-luz', cat: 'iluminacion', nombre: 'Luces regulables', desc: 'Escenas suaves para dormir y despertar.' },
+      { key: 'dorm-presencia', cat: 'seguridad', nombre: 'Sensor de presencia', desc: 'Apaga luces y avisa movimiento.' },
+      { key: 'dorm-termostato', cat: 'clima', nombre: 'Termostato', desc: 'Temperatura por horario y modo noche.' },
+      { key: 'dorm-cortinas', cat: 'energia', nombre: 'Cortinas motorizadas', desc: 'Control solar para ahorrar energía.' }
+    ],
+    living: [
+      { key: 'liv-luz', cat: 'iluminacion', nombre: 'Luces regulables', desc: 'Escenas de living, cine y visita.' },
+      { key: 'liv-movimiento', cat: 'seguridad', nombre: 'Sensor de movimiento', desc: 'Alerta y rutina de ausencia.' },
+      { key: 'liv-termostato', cat: 'clima', nombre: 'Termostato', desc: 'Clima por ambiente y horarios.' },
+      { key: 'liv-enchufe', cat: 'energia', nombre: 'Enchufe medidor', desc: 'Mide consumo de TV y equipos.' }
+    ],
+    cocina: [
+      { key: 'coc-luz', cat: 'iluminacion', nombre: 'Luces de trabajo', desc: 'Luz puntual sobre mesada y isla.' },
+      { key: 'coc-humo', cat: 'seguridad', nombre: 'Sensor de humo', desc: 'Aviso inmediato al celular.' },
+      { key: 'coc-gas', cat: 'seguridad', nombre: 'Sensor de gas', desc: 'Corta la válvula si detecta fuga.' },
+      { key: 'coc-extractor', cat: 'clima', nombre: 'Extractor automático', desc: 'Arranca con humedad y olores.' }
+    ],
+    bano: [
+      { key: 'ban-luz', cat: 'iluminacion', nombre: 'Luces automáticas', desc: 'Encendido por presencia, luz cálida.' },
+      { key: 'ban-extractor', cat: 'clima', nombre: 'Extractor', desc: 'Ventila por humedad, no por horario.' },
+      { key: 'ban-movimiento', cat: 'seguridad', nombre: 'Sensor de movimiento', desc: 'Rutina nocturna con luz baja.' }
+    ],
+    oficina: [
+      { key: 'ofi-luz', cat: 'iluminacion', nombre: 'Luces regulables', desc: 'Temperatura de color según tarea.' },
+      { key: 'ofi-termostato', cat: 'clima', nombre: 'Termostato', desc: 'Confort estable en jornada laboral.' },
+      { key: 'ofi-enchufe', cat: 'energia', nombre: 'Enchufe medidor', desc: 'Consumo de escritorio y monitores.' },
+      { key: 'ofi-presencia', cat: 'seguridad', nombre: 'Sensor de presencia', desc: 'Apaga equipos al salir.' }
+    ],
+    garage: [
+      { key: 'gar-luz', cat: 'iluminacion', nombre: 'Luces con sensor', desc: 'Encendido al entrar el auto.' },
+      { key: 'gar-camara', cat: 'seguridad', nombre: 'Cámara', desc: 'Vista y grabación del acceso.' },
+      { key: 'gar-apertura', cat: 'seguridad', nombre: 'Sensor de apertura', desc: 'Aviso si la puerta queda abierta.' },
+      { key: 'gar-ev', cat: 'energia', nombre: 'Cargador EV', desc: 'Carga programada en horario barato.' }
+    ],
+    exterior: [
+      { key: 'ext-luz', cat: 'iluminacion', nombre: 'Luces con sensor', desc: 'Paisajismo que enciende al atardecer.' },
+      { key: 'ext-camara', cat: 'seguridad', nombre: 'Cámara exterior', desc: 'Perímetro con visión nocturna.' },
+      { key: 'ext-enchufe', cat: 'energia', nombre: 'Enchufe de paisajismo', desc: 'Riego y luces con horario.' },
+      { key: 'ext-riego', cat: 'energia', nombre: 'Riego automático', desc: 'Riega según humedad del suelo.' }
+    ]
+  };
+
+  function rooms(list) {
+    return list.map(function (r) {
+      return { tipo: r.t, nombre: r.n, x: r.x, y: r.y, w: r.w, h: r.h };
+    });
+  }
+
+  var TEMPLATES = {
+    depto: rooms([
+      { t: 'living', n: 'Living-Comedor', x: 0.5, y: 0.5, w: 5, h: 4 },
+      { t: 'dormitorio', n: 'Dormitorio', x: 6, y: 0.5, w: 4, h: 3.5 },
+      { t: 'cocina', n: 'Cocina', x: 0.5, y: 5, w: 3.5, h: 3 },
+      { t: 'bano', n: 'Baño', x: 4.5, y: 5, w: 2.5, h: 2.5 }
+    ]),
+    casa: rooms([
+      { t: 'living', n: 'Living-Comedor', x: 0.5, y: 0.5, w: 6, h: 5 },
+      { t: 'cocina', n: 'Cocina', x: 7, y: 0.5, w: 4.5, h: 3 },
+      { t: 'bano', n: 'Baño', x: 7, y: 4, w: 2.5, h: 2 },
+      { t: 'oficina', n: 'Oficina', x: 9.5, y: 4, w: 2, h: 2 },
+      { t: 'dormitorio', n: 'Dormitorio 1', x: 0.5, y: 6, w: 3.5, h: 3.5 },
+      { t: 'dormitorio', n: 'Dormitorio 2', x: 4.5, y: 6, w: 3.5, h: 3.5 },
+      { t: 'dormitorio', n: 'Dormitorio 3', x: 8.5, y: 6, w: 3, h: 3.5 }
+    ]),
+    cero: []
   };
 
   var state = {
-    house: 'depto',
-    cats: { iluminacion: true, clima: false, seguridad: false, energia: false }
+    ambientes: [],
+    aceptadas: {},
+    selectedId: null,
+    template: null
   };
+
+  var planEl = plan;
+  var propsEl = document.getElementById('props');
+  var suggestionsEl = document.getElementById('suggestions');
+  var totalsEl = document.getElementById('totals');
+  var hintEl = document.getElementById('draft-hint');
+  var templateButtons = [].slice.call(document.querySelectorAll('.template-btn'));
+  var paletteButtons = [].slice.call(document.querySelectorAll('.palette__btn'));
+
+  var uidCounter = 1;
+
+  // --- Utilidades ------------------------------------------------------------
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function snap(value) {
+    return Math.round(value / AREA.step) * AREA.step;
+  }
+
+  function round(value) {
+    return Math.round(value * 10) / 10;
+  }
+
+  function pct(value, total) {
+    return (value / total) * 100;
+  }
+
+  function getRoom(id) {
+    for (var i = 0; i < state.ambientes.length; i += 1) {
+      if (state.ambientes[i].id === id) return state.ambientes[i];
+    }
+    return null;
+  }
+
+  function tipoOf(room) {
+    return TIPOS[room.tipo] || TIPOS.dormitorio;
+  }
+
+  function deviceIndex(tipo) {
+    return SUGERENCIAS[tipo] || [];
+  }
+
+  function findDevice(tipo, key) {
+    var list = deviceIndex(tipo);
+    for (var i = 0; i < list.length; i += 1) {
+      if (list[i].key === key) return list[i];
+    }
+    return null;
+  }
+
+  function defaultsFor(tipo) {
+    return deviceIndex(tipo).map(function (d) { return d.key; });
+  }
+
+  function ensureAceptadas(room) {
+    var current = state.aceptadas[room.id];
+    if (!current) {
+      state.aceptadas[room.id] = defaultsFor(room.tipo);
+    }
+  }
+
+  function totals() {
+    var out = { total: 0, iluminacion: 0, clima: 0, seguridad: 0, energia: 0 };
+    state.ambientes.forEach(function (room) {
+      var keys = state.aceptadas[room.id] || [];
+      keys.forEach(function (key) {
+        var device = findDevice(room.tipo, key);
+        if (!device) return;
+        out.total += 1;
+        out[device.cat] += 1;
+      });
+    });
+    return out;
+  }
+
+  function newId() {
+    var n = uidCounter;
+    while (getRoom('r' + n)) n += 1;
+    uidCounter = n + 1;
+    return 'r' + n;
+  }
+
+  function normalizeRoom(raw) {
+    var tipo = TIPOS[raw.tipo] ? raw.tipo : 'dormitorio';
+    var def = TIPOS[tipo];
+    var w = clamp(Number(raw.w) || def.w, AREA.min, AREA.w);
+    var h = clamp(Number(raw.h) || def.h, AREA.min, AREA.d);
+    return {
+      id: raw.id && /^r\d+$/.test(raw.id) ? raw.id : newId(),
+      tipo: tipo,
+      nombre: String(raw.nombre || def.label).slice(0, 40),
+      x: clamp(snap(Number(raw.x) || 0), 0, AREA.w - w),
+      y: clamp(snap(Number(raw.y) || 0), 0, AREA.d - h),
+      w: w,
+      h: h
+    };
+  }
+
+  // --- Persistencia ----------------------------------------------------------
+
+  function serialize() {
+    var aceptadas = {};
+    state.ambientes.forEach(function (room) {
+      aceptadas[room.id] = (state.aceptadas[room.id] || []).slice();
+    });
+    return {
+      v: 1,
+      template: state.template,
+      ambientes: state.ambientes,
+      aceptadas: aceptadas,
+      savedAt: Date.now()
+    };
+  }
+
+  function saveDraft() {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize()));
+    } catch (err) {
+      /* storage lleno o bloqueado: el configurador sigue funcionando */
+    }
+  }
+
+  var saveTimer = null;
+  function scheduleSave() {
+    if (saveTimer) window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(function () {
+      saveTimer = null;
+      saveDraft();
+    }, 200);
+  }
+
+  function restoreDraft() {
+    var raw;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (err) {
+      return false;
+    }
+    if (!raw) return false;
+    try {
+      var data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.ambientes)) return false;
+      var restored = [];
+      data.ambientes.slice(0, 40).forEach(function (r) {
+        if (!r || typeof r !== 'object') return;
+        var room = normalizeRoom(r);
+        if (room) restored.push(room);
+      });
+      state.ambientes = restored;
+      state.aceptadas = {};
+      restored.forEach(function (room) {
+        var keys = data.aceptadas && data.aceptadas[room.id];
+        var valid = deviceIndex(room.tipo).map(function (d) { return d.key; });
+        state.aceptadas[room.id] = Array.isArray(keys)
+          ? keys.filter(function (k) { return valid.indexOf(k) !== -1; })
+          : defaultsFor(room.tipo);
+      });
+      state.template = data.template || null;
+      state.selectedId = restored.length ? restored[0].id : null;
+      return restored.length > 0;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function clearDraft() {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch (err) {
+      /* noop */
+    }
+  }
+
+  // --- Render 2D -------------------------------------------------------------
+
+  function roomLabel(room) {
+    return room.nombre || tipoOf(room).label;
+  }
+
+  function applyRoomStyle(el, room) {
+    el.style.left = pct(room.x, AREA.w) + '%';
+    el.style.top = pct(room.y, AREA.d) + '%';
+    el.style.width = pct(room.w, AREA.w) + '%';
+    el.style.height = pct(room.h, AREA.d) + '%';
+  }
+
+  function updateRoomEl(room) {
+    var el = planEl.querySelector('.room[data-id="' + room.id + '"]');
+    if (!el) return;
+    applyRoomStyle(el, room);
+    var size = el.querySelector('.room__size');
+    if (size) size.textContent = round(room.w) + ' × ' + round(room.h) + ' m';
+    el.setAttribute('data-tipo', room.tipo);
+    el.setAttribute('aria-label', roomLabel(room) + ', ' + round(room.w) + ' por ' + round(room.h) + ' metros');
+  }
+
+  function renderPlan() {
+    planEl.innerHTML = '';
+
+    if (!state.ambientes.length) {
+      var empty = document.createElement('p');
+      empty.className = 'plan-empty';
+      empty.textContent = 'Elegí una plantilla o agregá un ambiente para empezar.';
+      planEl.appendChild(empty);
+      return;
+    }
+
+    state.ambientes.forEach(function (room) {
+      var el = document.createElement('div');
+      el.className = 'room' + (room.id === state.selectedId ? ' is-selected' : '');
+      el.setAttribute('data-id', room.id);
+      el.setAttribute('data-tipo', room.tipo);
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'group');
+      el.setAttribute('aria-label', roomLabel(room) + ', ' + round(room.w) + ' por ' + round(room.h) + ' metros');
+
+      var name = document.createElement('span');
+      name.className = 'room__name';
+      name.textContent = roomLabel(room);
+
+      var size = document.createElement('span');
+      size.className = 'room__size';
+      size.textContent = round(room.w) + ' × ' + round(room.h) + ' m';
+
+      var handle = document.createElement('span');
+      handle.className = 'room__handle';
+      handle.setAttribute('aria-hidden', 'true');
+
+      el.appendChild(name);
+      el.appendChild(size);
+      el.appendChild(handle);
+      applyRoomStyle(el, room);
+      planEl.appendChild(el);
+    });
+  }
+
+  // --- Props -----------------------------------------------------------------
+
+  function select(id) {
+    if (state.selectedId === id) return;
+    state.selectedId = id;
+    var items = planEl.querySelectorAll('.room');
+    for (var i = 0; i < items.length; i += 1) {
+      items[i].classList.toggle('is-selected', items[i].getAttribute('data-id') === id);
+    }
+    renderProps();
+  }
+
+  function renderProps() {
+    propsEl.innerHTML = '';
+    var room = state.selectedId ? getRoom(state.selectedId) : null;
+
+    if (!room) {
+      var hint = document.createElement('p');
+      hint.className = 'props__hint';
+      hint.textContent = 'Seleccioná un ambiente en el plano para editarlo.';
+      propsEl.appendChild(hint);
+      return;
+    }
+
+    var title = document.createElement('p');
+    title.className = 'props__title';
+    title.textContent = 'Ambiente seleccionado';
+
+    var fieldName = document.createElement('div');
+    fieldName.className = 'field';
+    var labelName = document.createElement('label');
+    labelName.className = 'field__label';
+    labelName.setAttribute('for', 'room-name');
+    labelName.textContent = 'Nombre';
+    var inputName = document.createElement('input');
+    inputName.className = 'field__input';
+    inputName.id = 'room-name';
+    inputName.type = 'text';
+    inputName.maxLength = 40;
+    inputName.value = room.nombre;
+    fieldName.appendChild(labelName);
+    fieldName.appendChild(inputName);
+
+    var fieldType = document.createElement('div');
+    fieldType.className = 'field';
+    var labelType = document.createElement('label');
+    labelType.className = 'field__label';
+    labelType.setAttribute('for', 'room-type');
+    labelType.textContent = 'Tipo';
+    var selectType = document.createElement('select');
+    selectType.className = 'field__input';
+    selectType.id = 'room-type';
+    Object.keys(TIPOS).forEach(function (key) {
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = TIPOS[key].label;
+      if (key === room.tipo) opt.selected = true;
+      selectType.appendChild(opt);
+    });
+    fieldType.appendChild(labelType);
+    fieldType.appendChild(selectType);
+
+    var meta = document.createElement('p');
+    meta.className = 'props__meta';
+    meta.textContent = 'Tamaño: ' + round(room.w) + ' × ' + round(room.h) + ' m · mové con flechas, arrastrá o usá la esquina.';
+
+    var actions = document.createElement('div');
+    actions.className = 'props__actions';
+    var remove = document.createElement('button');
+    remove.className = 'btn btn--ghost';
+    remove.type = 'button';
+    remove.textContent = 'Eliminar ambiente';
+    actions.appendChild(remove);
+
+    propsEl.appendChild(title);
+    propsEl.appendChild(fieldName);
+    propsEl.appendChild(fieldType);
+    propsEl.appendChild(meta);
+    propsEl.appendChild(actions);
+
+    inputName.addEventListener('input', function () {
+      room.nombre = inputName.value.slice(0, 40);
+      var el = planEl.querySelector('.room[data-id="' + room.id + '"] .room__name');
+      if (el) el.textContent = roomLabel(room);
+      var elRoom = planEl.querySelector('.room[data-id="' + room.id + '"]');
+      if (elRoom) elRoom.setAttribute('aria-label', roomLabel(room) + ', ' + round(room.w) + ' por ' + round(room.h) + ' metros');
+      schedule3D();
+      scheduleSave();
+      updateSuggestionTitles();
+    });
+
+    selectType.addEventListener('change', function () {
+      setTipo(room.id, selectType.value);
+    });
+
+    remove.addEventListener('click', function () {
+      removeRoom(room.id);
+    });
+  }
+
+  // --- Sugerencias -----------------------------------------------------------
+
+  function roomArea(room) {
+    return round(room.w * room.h);
+  }
+
+  function updateSuggestionTitles() {
+    var cards = suggestionsEl.querySelectorAll('.suggest-card');
+    for (var i = 0; i < cards.length; i += 1) {
+      var id = cards[i].getAttribute('data-room');
+      var room = getRoom(id);
+      if (!room) continue;
+      var head = cards[i].querySelector('.suggest-card__title');
+      if (head) head.textContent = roomLabel(room) + ' · ' + roomArea(room) + ' m²';
+    }
+  }
+
+  function renderSuggestions() {
+    suggestionsEl.innerHTML = '';
+
+    if (!state.ambientes.length) {
+      var empty = document.createElement('p');
+      empty.className = 'suggest-empty';
+      empty.textContent = 'Agregá ambientes para ver qué te sugerimos en cada uno.';
+      suggestionsEl.appendChild(empty);
+      return;
+    }
+
+    state.ambientes.forEach(function (room) {
+      ensureAceptadas(room);
+      var devices = deviceIndex(room.tipo);
+      var accepted = state.aceptadas[room.id] || [];
+
+      var card = document.createElement('article');
+      card.className = 'suggest-card';
+      card.setAttribute('data-room', room.id);
+
+      var head = document.createElement('div');
+      head.className = 'suggest-card__head';
+      var title = document.createElement('h3');
+      title.className = 'suggest-card__title';
+      title.textContent = roomLabel(room) + ' · ' + roomArea(room) + ' m²';
+      head.appendChild(title);
+      card.appendChild(head);
+
+      var list = document.createElement('ul');
+      list.className = 'suggest-list';
+
+      devices.forEach(function (device) {
+        var cat = CATS[device.cat];
+        var item = document.createElement('li');
+        var label = document.createElement('label');
+        label.className = 'suggest-item';
+
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = accepted.indexOf(device.key) !== -1;
+        input.setAttribute('data-room', room.id);
+        input.setAttribute('data-key', device.key);
+
+        var dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.backgroundColor = cat.hex;
+        dot.setAttribute('aria-hidden', 'true');
+
+        var text = document.createElement('span');
+        text.className = 'suggest-item__text';
+        var strong = document.createElement('strong');
+        strong.textContent = device.nombre;
+        var small = document.createElement('span');
+        small.textContent = device.desc;
+        text.appendChild(strong);
+        text.appendChild(small);
+
+        label.appendChild(input);
+        label.appendChild(dot);
+        label.appendChild(text);
+        item.appendChild(label);
+        list.appendChild(item);
+      });
+
+      card.appendChild(list);
+      suggestionsEl.appendChild(card);
+    });
+  }
+
+  function renderTotals() {
+    var t = totals();
+    totalsEl.textContent =
+      t.total + ' dispositivos · Iluminación ' + t.iluminacion +
+      ' · Clima ' + t.clima + ' · Seguridad ' + t.seguridad +
+      ' · Energía ' + t.energia;
+  }
+
+  function syncTemplates() {
+    templateButtons.forEach(function (btn) {
+      btn.setAttribute('aria-pressed', btn.getAttribute('data-template') === state.template ? 'true' : 'false');
+    });
+  }
+
+  // --- Mutaciones ------------------------------------------------------------
+
+  function addRoom(tipo) {
+    var def = TIPOS[tipo] || TIPOS.dormitorio;
+    var w = def.w;
+    var h = def.h;
+    var count = state.ambientes.length;
+    var x = clamp(snap(0.5 + (count % 3) * 2.6), 0, AREA.w - w);
+    var y = clamp(snap(0.5 + (count % 2) * 2.6), 0, AREA.d - h);
+
+    var room = normalizeRoom({
+      tipo: tipo, nombre: def.label, x: x, y: y, w: w, h: h
+    });
+    state.ambientes.push(room);
+    state.aceptadas[room.id] = defaultsFor(tipo);
+    state.selectedId = room.id;
+    state.template = null;
+    syncTemplates();
+    renderPlan();
+    renderProps();
+    renderSuggestions();
+    renderTotals();
+    schedule3D();
+    scheduleSave();
+    return room;
+  }
+
+  function removeRoom(id) {
+    var index = -1;
+    for (var i = 0; i < state.ambientes.length; i += 1) {
+      if (state.ambientes[i].id === id) { index = i; break; }
+    }
+    if (index === -1) return;
+    state.ambientes.splice(index, 1);
+    delete state.aceptadas[id];
+    if (state.selectedId === id) {
+      state.selectedId = state.ambientes.length ? state.ambientes[0].id : null;
+    }
+    state.template = null;
+    syncTemplates();
+    renderPlan();
+    renderProps();
+    renderSuggestions();
+    renderTotals();
+    schedule3D();
+    saveDraft();
+  }
+
+  function setTipo(id, tipo) {
+    var room = getRoom(id);
+    if (!room || !TIPOS[tipo]) return;
+    room.tipo = tipo;
+    if (room.nombre === TIPOS[room.tipo].label) {
+      /* conserva el nombre; si era el label genérico, lo dejamos igual */
+    }
+    state.aceptadas[id] = defaultsFor(tipo);
+    state.template = null;
+    syncTemplates();
+    renderPlan();
+    renderProps();
+    renderSuggestions();
+    renderTotals();
+    schedule3D();
+    saveDraft();
+  }
+
+  function toggleDevice(roomId, key, checked) {
+    var room = getRoom(roomId);
+    if (!room) return;
+    ensureAceptadas(room);
+    var keys = state.aceptadas[roomId];
+    var index = keys.indexOf(key);
+    if (checked && index === -1) keys.push(key);
+    if (!checked && index !== -1) keys.splice(index, 1);
+    renderTotals();
+    schedule3D();
+    scheduleSave();
+  }
+
+  function moveRoom(room, dx, dy) {
+    room.x = clamp(snap(room.x + dx), 0, AREA.w - room.w);
+    room.y = clamp(snap(room.y + dy), 0, AREA.d - room.h);
+    updateRoomEl(room);
+    schedule3D();
+    scheduleSave();
+  }
+
+  function loadTemplate(id) {
+    var list = TEMPLATES[id] || [];
+    state.ambientes = list.map(function (r) {
+      var room = normalizeRoom({ tipo: r.tipo, nombre: r.nombre, x: r.x, y: r.y, w: r.w, h: r.h });
+      state.aceptadas[room.id] = defaultsFor(room.tipo);
+      return room;
+    });
+    state.template = id;
+    state.selectedId = state.ambientes.length ? state.ambientes[0].id : null;
+    syncTemplates();
+    renderPlan();
+    renderProps();
+    renderSuggestions();
+    renderTotals();
+    schedule3D();
+    saveDraft();
+  }
+
+  function resetAll() {
+    state.ambientes = [];
+    state.aceptadas = {};
+    state.selectedId = null;
+    state.template = null;
+    clearDraft();
+    if (hintEl) {
+      hintEl.hidden = false;
+      hintEl.textContent = 'Empezaste de cero. Elegí una plantilla o agregá ambientes.';
+    }
+    syncTemplates();
+    renderPlan();
+    renderProps();
+    renderSuggestions();
+    renderTotals();
+    schedule3D();
+  }
+
+  // --- Drag & teclado --------------------------------------------------------
+
+  var drag = null;
+
+  function startDrag(event, room, resizing) {
+    var rect = planEl.getBoundingClientRect();
+    if (!rect.width) return;
+    drag = {
+      id: room.id,
+      resizing: resizing,
+      startX: event.clientX,
+      startY: event.clientY,
+      x0: room.x,
+      y0: room.y,
+      w0: room.w,
+      h0: room.h,
+      ppmX: AREA.w / rect.width,
+      ppmY: AREA.d / rect.height
+    };
+    document.body.classList.add('is-dragging');
+    if (event.pointerId !== undefined && event.target.setPointerCapture) {
+      try { event.target.setPointerCapture(event.pointerId); } catch (err) { /* noop */ }
+    }
+    event.preventDefault();
+  }
+
+  planEl.addEventListener('pointerdown', function (event) {
+    var roomEl = event.target.closest ? event.target.closest('.room') : null;
+    if (!roomEl) {
+      select(null);
+      return;
+    }
+    var room = getRoom(roomEl.getAttribute('data-id'));
+    if (!room) return;
+    select(room.id);
+    var handle = event.target.closest('.room__handle');
+    startDrag(event, room, !!handle);
+  });
+
+  window.addEventListener('pointermove', function (event) {
+    if (!drag) return;
+    var room = getRoom(drag.id);
+    if (!room) return;
+    var dx = (event.clientX - drag.startX) * drag.ppmX;
+    var dy = (event.clientY - drag.startY) * drag.ppmY;
+    if (drag.resizing) {
+      room.w = clamp(snap(drag.w0 + dx), AREA.min, AREA.w - room.x);
+      room.h = clamp(snap(drag.h0 + dy), AREA.min, AREA.d - room.y);
+    } else {
+      room.x = clamp(snap(drag.x0 + dx), 0, AREA.w - room.w);
+      room.y = clamp(snap(drag.y0 + dy), 0, AREA.d - room.h);
+    }
+    updateRoomEl(room);
+    schedule3D();
+  });
+
+  function endDrag() {
+    if (!drag) return;
+    drag = null;
+    document.body.classList.remove('is-dragging');
+    renderProps();
+    saveDraft();
+  }
+
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+
+  planEl.addEventListener('focusin', function (event) {
+    var roomEl = event.target.closest ? event.target.closest('.room') : null;
+    if (roomEl) select(roomEl.getAttribute('data-id'));
+  });
+
+  planEl.addEventListener('keydown', function (event) {
+    var roomEl = event.target.closest ? event.target.closest('.room') : null;
+    if (!roomEl) return;
+    var room = getRoom(roomEl.getAttribute('data-id'));
+    if (!room) return;
+    var key = event.key;
+
+    if (key === 'Delete' || key === 'Backspace') {
+      event.preventDefault();
+      removeRoom(room.id);
+      return;
+    }
+
+    var moves = { ArrowLeft: [-0.5, 0], ArrowRight: [0.5, 0], ArrowUp: [0, -0.5], ArrowDown: [0, 0.5] };
+    if (!moves[key]) return;
+    event.preventDefault();
+    moveRoom(room, moves[key][0], moves[key][1]);
+  });
+
+  // --- Eventos de UI ---------------------------------------------------------
+
+  paletteButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      addRoom(btn.getAttribute('data-add'));
+    });
+  });
+
+  templateButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      loadTemplate(btn.getAttribute('data-template'));
+    });
+  });
+
+  suggestionsEl.addEventListener('change', function (event) {
+    var input = event.target;
+    if (!input || input.type !== 'checkbox') return;
+    toggleDevice(input.getAttribute('data-room'), input.getAttribute('data-key'), input.checked);
+  });
+
+  var resetBtn = document.getElementById('reset-draft');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', resetAll);
+  }
+
+  // --- 3D --------------------------------------------------------------------
 
   var scene;
   var camera;
   var renderer;
   var controls;
   var root = null;
-  var groups = {};
+  var stats = { meshes: 0, sprites: 0 };
 
-  var houseButtons = [].slice.call(document.querySelectorAll('.house-switch__btn'));
-  var toggleButtons = [].slice.call(document.querySelectorAll('.config-toggle'));
-
-  // --- Utilidades de material -------------------------------------------------
-
-  function newMat(color, opts) {
-    var params = { color: color };
-    if (opts) {
-      for (var k in opts) {
-        if (Object.prototype.hasOwnProperty.call(opts, k)) params[k] = opts[k];
+  function disposeRoot() {
+    if (!root) return;
+    scene.remove(root);
+    root.traverse(function (obj) {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        var mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach(function (m) {
+          if (m.map) m.map.dispose();
+          m.dispose();
+        });
       }
-    }
-    return new THREE.MeshStandardMaterial(params);
-  }
-
-  function collectMaterials(group) {
-    var mats = [];
-    group.traverse(function (obj) {
-      if (!obj.material) return;
-      var list = Array.isArray(obj.material) ? obj.material : [obj.material];
-      list.forEach(function (m) {
-        if (mats.indexOf(m) !== -1) return;
-        m.transparent = true;
-        m.userData.baseOpacity = m.opacity;
-        m.userData.baseEmissive = m.emissiveIntensity || 0;
-        mats.push(m);
-      });
     });
-    group.userData.materials = mats;
-    return group;
+    root = null;
   }
 
-  function groupWithTargets(group, on) {
-    group.userData.value = on ? 1 : 0;
-    group.userData.target = on ? 1 : 0;
-    return group;
+  function makeLabel(text) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '600 44px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#e8eef7';
+    var label = text.length > 18 ? text.slice(0, 17) + '…' : text;
+    ctx.fillText(label, canvas.width / 2, canvas.height / 2);
+
+    var tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+    var sprite = new THREE.Sprite(mat);
+    sprite.scale.set(3.2, 0.8, 1);
+    return sprite;
   }
 
-  function countMeshes(obj) {
-    var n = 0;
-    obj.traverse(function (o) {
-      if (o.isMesh && o.visible !== false) n += 1;
-    });
-    return n;
-  }
+  function buildRoom3D(room, wallMat, edgeMat) {
+    var tipo = tipoOf(room);
+    var color = new THREE.Color(0x111a2c).lerp(new THREE.Color(tipo.color), 0.2);
+    var floorMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.95, metalness: 0.04 });
 
-  // --- Construcción de la vivienda -------------------------------------------
-
-  function addWall(parent, len, x, z, axis, wallMat, edgeMat) {
-    var height = 1.1;
-    var geo = axis === 'x'
-      ? new THREE.BoxGeometry(len, height, 0.12)
-      : new THREE.BoxGeometry(0.12, height, len);
-    var wall = new THREE.Mesh(geo, wallMat);
-    wall.position.set(x, height / 2, z);
-    parent.add(wall);
-
-    var edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat);
-    edges.position.copy(wall.position);
-    parent.add(edges);
-  }
-
-  function buildPreset(preset) {
-    var w = preset.w;
-    var d = preset.d;
-
-    root = new THREE.Group();
-
-    var floorMat = newMat(0x131f33, { roughness: 0.95, metalness: 0.05 });
-    var floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.16, d), floorMat);
-    floor.position.y = -0.08;
+    var floor = new THREE.Mesh(new THREE.BoxGeometry(room.w - 0.06, 0.12, room.h - 0.06), floorMat);
+    floor.position.set(room.x + room.w / 2, -0.06, room.y + room.h / 2);
     root.add(floor);
 
-    var wallMat = newMat(0x263449, { roughness: 0.8, transparent: true, opacity: 0.9 });
+    var h = AREA.wallH;
+    var walls = [
+      { x: room.x + room.w / 2, z: room.y, w: room.w, d: 0.12 },
+      { x: room.x + room.w / 2, z: room.y + room.h, w: room.w, d: 0.12 },
+      { x: room.x, z: room.y + room.h / 2, w: 0.12, d: room.h },
+      { x: room.x + room.w, z: room.y + room.h / 2, w: 0.12, d: room.h }
+    ];
+    walls.forEach(function (wall) {
+      var geo = new THREE.BoxGeometry(wall.w, h, wall.d);
+      var mesh = new THREE.Mesh(geo, wallMat);
+      mesh.position.set(wall.x, h / 2, wall.z);
+      root.add(mesh);
+      var edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat);
+      edges.position.copy(mesh.position);
+      root.add(edges);
+    });
+
+    var sprite = makeLabel(roomLabel(room));
+    sprite.position.set(room.x + room.w / 2, 1.4, room.y + room.h / 2);
+    root.add(sprite);
+
+    var keys = state.aceptadas[room.id] || [];
+    keys.forEach(function (key, index) {
+      var device = findDevice(room.tipo, key);
+      if (!device) return;
+      var cat = CATS[device.cat];
+      var cols = Math.max(1, Math.floor(room.w / 0.9));
+      var px = room.x + 0.45 + (index % cols) * 0.9;
+      var pz = room.y + 0.45 + Math.floor(index / cols) * 0.9;
+      px = Math.min(px, room.x + room.w - 0.3);
+      pz = Math.min(pz, room.y + room.h - 0.3);
+
+      var dotMat = new THREE.MeshStandardMaterial({
+        color: cat.color, emissive: cat.color, emissiveIntensity: 0.9, roughness: 0.4
+      });
+      var dot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), dotMat);
+      dot.position.set(px, 0.16, pz);
+      root.add(dot);
+
+      var zoneMat = new THREE.MeshBasicMaterial({
+        color: cat.color, transparent: true, opacity: 0.12, depthWrite: false
+      });
+      var zone = new THREE.Mesh(new THREE.CircleGeometry(0.32, 20), zoneMat);
+      zone.rotation.x = -Math.PI / 2;
+      zone.position.set(px, 0.012, pz);
+      root.add(zone);
+    });
+  }
+
+  function rebuildScene() {
+    disposeRoot();
+    root = new THREE.Group();
+
+    var wallMat = new THREE.MeshStandardMaterial({
+      color: 0x263449, roughness: 0.8, transparent: true, opacity: 0.9
+    });
     var edgeMat = new THREE.LineBasicMaterial({
-      color: 0x8b9ab5,
-      transparent: true,
-      opacity: 0.45
+      color: 0x8b9ab5, transparent: true, opacity: 0.45
     });
 
-    // Perímetro abierto al frente (diorama): fondo, izquierda y derecha.
-    addWall(root, w, 0, -d / 2, 'x', wallMat, edgeMat);
-    addWall(root, d, -w / 2, 0, 'z', wallMat, edgeMat);
-    addWall(root, d, w / 2, 0, 'z', wallMat, edgeMat);
-
-    preset.partitions.forEach(function (p) {
-      addWall(root, p.len, p.x, p.z, p.axis, wallMat, edgeMat);
-    });
-
-    groups = {
-      iluminacion: groupWithTargets(
-        collectMaterials(buildLighting(preset)),
-        state.cats.iluminacion
-      ),
-      clima: groupWithTargets(collectMaterials(buildClimate(preset)), state.cats.clima),
-      seguridad: groupWithTargets(
-        collectMaterials(buildSecurity(preset)),
-        state.cats.seguridad
-      ),
-      energia: groupWithTargets(collectMaterials(buildEnergy(preset)), state.cats.energia)
-    };
-
-    Object.keys(groups).forEach(function (key) {
-      root.add(groups[key]);
-      applyFade(groups[key], true);
+    state.ambientes.forEach(function (room) {
+      buildRoom3D(room, wallMat, edgeMat);
     });
 
     scene.add(root);
+    stats = { meshes: 0, sprites: 0 };
+    root.traverse(function (obj) {
+      if (obj.isMesh) stats.meshes += 1;
+      if (obj.isSprite) stats.sprites += 1;
+    });
   }
 
-  function buildLighting(preset) {
-    var g = new THREE.Group();
-    var bulbMat = newMat(0x2dd4bf, {
-      emissive: 0x2dd4bf,
-      emissiveIntensity: 1.5,
-      roughness: 0.35
+  var rebuildPending = false;
+  function schedule3D() {
+    if (rebuildPending) return;
+    rebuildPending = true;
+    window.requestAnimationFrame(function () {
+      rebuildPending = false;
+      rebuildScene();
     });
-    var discMat = new THREE.MeshBasicMaterial({
-      color: 0x2dd4bf,
-      transparent: true,
-      opacity: 0.12,
-      depthWrite: false
-    });
-
-    preset.lights.forEach(function (p) {
-      var bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10), bulbMat);
-      bulb.position.set(p[0], 1.0, p[1]);
-      g.add(bulb);
-
-      var disc = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24), discMat);
-      disc.rotation.x = -Math.PI / 2;
-      disc.position.set(p[0], 0.015, p[1]);
-      g.add(disc);
-    });
-
-    return g;
   }
 
-  function buildClimate(preset) {
-    var g = new THREE.Group();
-    var ventMat = newMat(0x60a5fa, { emissive: 0x60a5fa, emissiveIntensity: 0.4, roughness: 0.5 });
-    var glassMat = newMat(0x0f1a2c, { emissive: 0x60a5fa, emissiveIntensity: 0.3, roughness: 0.2 });
-    var zoneMat = new THREE.MeshBasicMaterial({
-      color: 0x60a5fa,
-      transparent: true,
-      opacity: 0.1,
-      depthWrite: false
-    });
-
-    // Termostato en la pared del fondo.
-    var thermostat = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.18, 0.04), glassMat);
-    thermostat.position.set(0, 0.9, -preset.d / 2 + 0.1);
-    g.add(thermostat);
-
-    preset.clima.forEach(function (p) {
-      var vent = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.16), ventMat);
-      vent.position.set(p[0], 1.02, p[1]);
-      vent.rotation.y = p[2];
-      g.add(vent);
-
-      var zone = new THREE.Mesh(new THREE.CircleGeometry(0.85, 24), zoneMat);
-      zone.rotation.x = -Math.PI / 2;
-      zone.position.set(p[0], 0.02, p[1]);
-      g.add(zone);
-    });
-
-    return g;
-  }
-
-  function buildSecurity(preset) {
-    var g = new THREE.Group();
-    var camMat = newMat(0xf87171, { emissive: 0xf87171, emissiveIntensity: 0.45, roughness: 0.5 });
-    var lensMat = newMat(0x0f1a2c, { roughness: 0.2 });
-
-    preset.cameras.forEach(function (p) {
-      var cam = new THREE.Group();
-      var body = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.1), camMat);
-      cam.add(body);
-      var cone = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 10), camMat);
-      cone.rotation.x = Math.PI / 2;
-      cone.position.z = -0.13;
-      cam.add(cone);
-      var lens = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), lensMat);
-      lens.position.z = 0.06;
-      cam.add(lens);
-      cam.position.set(p[0], 1.02, p[1]);
-      cam.rotation.y = p[2];
-      g.add(cam);
-    });
-
-    preset.sensors.forEach(function (p) {
-      var sensor = new THREE.Group();
-      var box = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 0.04), camMat);
-      sensor.add(box);
-      var led = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), camMat);
-      led.position.set(0, 0.06, 0.025);
-      sensor.add(led);
-      sensor.position.set(p[0], 0.85, p[1]);
-      g.add(sensor);
-    });
-
-    return g;
-  }
-
-  function buildEnergy(preset) {
-    var g = new THREE.Group();
-    var panelMat = newMat(0x4ade80, { emissive: 0x4ade80, emissiveIntensity: 0.18, roughness: 0.3 });
-    var darkMat = newMat(0x0f1a2c, { roughness: 0.6 });
-
-    // Panel solar sobre la línea de cubierta.
-    var solar = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.05, 1.0), panelMat);
-    solar.position.set(-preset.w * 0.25, 1.16, -preset.d / 2 + 1.2);
-    solar.rotation.x = -0.18;
-    g.add(solar);
-
-    // Batería de respaldo.
-    var battery = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.22), panelMat);
-    battery.position.set(-preset.w / 2 + 0.55, 0.25, preset.d / 2 - 1.0);
-    g.add(battery);
-
-    // Tablero inteligente en la pared derecha.
-    var board = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.4), darkMat);
-    board.position.set(preset.w / 2 - 0.08, 0.58, 0);
-    g.add(board);
-
-    return g;
-  }
-
-  // --- Toggles y panel --------------------------------------------------------
-
-  function countsOf(preset) {
-    return {
-      iluminacion: preset.lights.length,
-      clima: preset.clima.length + 1,
-      seguridad: preset.cameras.length + preset.sensors.length,
-      energia: 3
-    };
-  }
-
-  function renderPanel() {
-    var preset = PRESETS[state.house];
-    var counts = countsOf(preset);
-    var html = '';
-
-    CATS.forEach(function (cat) {
-      if (!state.cats[cat.id]) return;
-      html +=
-        '<div class="config-panel__row">' +
-        '<p class="config-panel__head">' +
-        '<span class="config-panel__name">' +
-        '<span class="config-panel__dot" style="--dot:' + cat.hex + '"></span>' +
-        cat.label +
-        '</span>' +
-        '<span class="config-panel__count">' + counts[cat.id] + ' dispositivos</span>' +
-        '</p>' +
-        '<p class="config-panel__desc">' + cat.desc + '</p>' +
-        '</div>';
-    });
-
-    panel.innerHTML = html ||
-      '<p class="config-panel__empty">Activá una capa para ver qué incluye.</p>';
-  }
-
-  function applyFade(group, instant) {
-    var target = group.userData.target;
-
-    if (instant || REDUCED) {
-      group.userData.value = target;
-    } else {
-      group.userData.value += (target - group.userData.value) * 0.18;
-      if (Math.abs(target - group.userData.value) < 0.005) group.userData.value = target;
-    }
-
-    var value = group.userData.value;
-    group.userData.materials.forEach(function (m) {
-      m.opacity = m.userData.baseOpacity * value;
-      if (m.userData.baseEmissive) {
-        m.emissiveIntensity = m.userData.baseEmissive * value;
-      }
-    });
-    group.visible = value > 0.01;
-  }
-
-  function setCategory(id, on) {
-    if (!Object.prototype.hasOwnProperty.call(state.cats, id)) return;
-    state.cats[id] = !!on;
-
-    toggleButtons.forEach(function (btn) {
-      if (btn.getAttribute('data-cat') === id) {
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-      }
-    });
-
-    if (groups[id]) {
-      groups[id].userData.target = on ? 1 : 0;
-    }
-    renderPanel();
-  }
-
-  function rebuild() {
-    if (root) {
-      scene.remove(root);
-      root.traverse(function (o) {
-        if (o.geometry) o.geometry.dispose();
-        if (o.material) {
-          var list = Array.isArray(o.material) ? o.material : [o.material];
-          list.forEach(function (m) { m.dispose(); });
-        }
-      });
-      root = null;
-    }
-    groups = {};
-    buildPreset(PRESETS[state.house]);
-    focusCamera(PRESETS[state.house]);
-    resize();
-  }
-
-  function setHouse(id) {
-    if (!PRESETS[id] || id === state.house) return;
-    state.house = id;
-    houseButtons.forEach(function (btn) {
-      btn.setAttribute('aria-pressed', btn.getAttribute('data-house') === id ? 'true' : 'false');
-    });
-    rebuild();
-    renderPanel();
-  }
-
-  // --- Escena -----------------------------------------------------------------
-
-  function focusCamera(preset) {
-    camera.position.set(
-      preset.w * 0.85,
-      Math.max(preset.w, preset.d) * 1.25,
-      preset.d * 1.35
-    );
-    controls.target.set(0, 0.35, 0);
+  function focusCamera() {
+    camera.position.set(AREA.w * 0.95, 12.5, AREA.d * 1.45);
+    controls.target.set(AREA.w / 2, 0.35, AREA.d / 2);
     controls.update();
   }
 
@@ -459,15 +938,13 @@
   }
 
   function init() {
-    // r147: interpretar los hex como sRGB desde el inicio (antes de crear
-    // colores), para que el fondo y los materiales no se laven.
     if (THREE.ColorManagement) THREE.ColorManagement.legacyMode = false;
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b1220);
-    scene.fog = new THREE.Fog(0x0b1220, 18, 55);
+    scene.fog = new THREE.Fog(0x0b1220, 22, 60);
 
-    camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+    camera = new THREE.PerspectiveCamera(42, 1, 0.1, 220);
 
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -483,12 +960,10 @@
     container.appendChild(renderer.domElement);
 
     scene.add(new THREE.AmbientLight(0x9fb3cc, 0.75));
-
     var key = new THREE.DirectionalLight(0xffffff, 0.95);
-    key.position.set(7, 12, 6);
+    key.position.set(8, 14, 8);
     scene.add(key);
-
-    var fill = new THREE.DirectionalLight(0x60a5fa, 0.35);
+    var fill = new THREE.DirectionalLight(0x60a5fa, 0.3);
     fill.position.set(-8, 6, -6);
     scene.add(fill);
 
@@ -496,78 +971,78 @@
       controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.08;
-      controls.minDistance = 8;
-      controls.maxDistance = 34;
+      controls.minDistance = 7;
+      controls.maxDistance = 36;
       controls.maxPolarAngle = Math.PI / 2.15;
       controls.autoRotate = !REDUCED;
-      controls.autoRotateSpeed = 0.7;
+      controls.autoRotateSpeed = 0.6;
       controls.addEventListener('start', function () {
         controls.autoRotate = false;
       });
     } else {
-      controls = {
-        target: new THREE.Vector3(0, 0.35, 0),
-        update: function () {}
-      };
+      controls = { target: new THREE.Vector3(AREA.w / 2, 0.35, AREA.d / 2), update: function () {} };
       camera.lookAt(controls.target);
     }
 
-    buildPreset(PRESETS[state.house]);
-    focusCamera(PRESETS[state.house]);
+    focusCamera();
     resize();
-    renderPanel();
-
+    rebuildScene();
     window.addEventListener('resize', resize);
 
     (function animate() {
       window.requestAnimationFrame(animate);
-      Object.keys(groups).forEach(function (key2) {
-        var g = groups[key2];
-        if (g.userData.value !== g.userData.target) applyFade(g, false);
-      });
       if (controls.update) controls.update();
       renderer.render(scene, camera);
     })();
   }
 
-  houseButtons.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      setHouse(btn.getAttribute('data-house'));
-    });
-  });
+  // --- API pública -----------------------------------------------------------
 
-  toggleButtons.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var id = btn.getAttribute('data-cat');
-      setCategory(id, btn.getAttribute('aria-pressed') !== 'true');
-    });
-  });
-
-  // API mínima de diagnóstico / integración F2.
   window.nexoConfigurador = {
     getState: function () {
-      var preset = PRESETS[state.house];
-      var visible = {};
-      Object.keys(groups).forEach(function (k) {
-        visible[k] = {
-          visible: groups[k].visible,
-          opacity: Math.round(groups[k].userData.value * 100) / 100,
-          meshes: countMeshes(groups[k])
-        };
+      var t = totals();
+      var aceptadas = {};
+      state.ambientes.forEach(function (room) {
+        aceptadas[room.id] = (state.aceptadas[room.id] || []).slice();
       });
       return {
-        house: state.house,
-        cats: JSON.parse(JSON.stringify(state.cats)),
-        counts: countsOf(preset),
-        groups: visible,
-        autoRotate: controls ? !!controls.autoRotate : false,
+        ambientes: JSON.parse(JSON.stringify(state.ambientes)),
+        aceptadas: aceptadas,
+        totals: t,
+        selectedId: state.selectedId,
+        template: state.template,
+        meshes: { total: stats.meshes, sprites: stats.sprites },
         reducedMotion: REDUCED,
-        canvas: { width: renderer.domElement.width, height: renderer.domElement.height }
+        canvas: renderer
+          ? { width: renderer.domElement.width, height: renderer.domElement.height }
+          : null
       };
     },
-    setCategory: setCategory,
-    setHouse: setHouse
+    setTemplate: loadTemplate,
+    addRoom: addRoom,
+    removeRoom: removeRoom,
+    reset: resetAll
   };
 
+  // --- Arranque --------------------------------------------------------------
+
+  var restored = restoreDraft();
+  ensureAceptadasAll();
+  syncTemplates();
+  renderPlan();
+  renderProps();
+  renderSuggestions();
+  renderTotals();
   init();
+
+  if (restored && hintEl) {
+    hintEl.hidden = false;
+    hintEl.textContent = 'Recuperamos tu última casa.';
+  }
+
+  function ensureAceptadasAll() {
+    state.ambientes.forEach(function (room) {
+      ensureAceptadas(room);
+    });
+  }
 })();

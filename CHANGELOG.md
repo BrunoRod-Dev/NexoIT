@@ -51,7 +51,14 @@ Historial por fases de NexoIT. Fuente de hashes/fechas: `git log --oneline`.
 - `sitemap.xml` y `robots.txt` con la URL predecible de Pages; **JSON-LD `WebPage`** por división y `og:url` absolutas.
 - Fix del wrap del diagrama de Grow (umbral de apilado).
 
-## R5 — 2026-11-25 (pendiente de commit)
+## R5 — 2026-11-25
 
 - **CI** (`.github/workflows/ci.yml`): pytest + `node --check` de `main.js` y `configurador.js` en push/PR a `main`.
 - **Docs**: README consolidado de punta a punta y este CHANGELOG (aún sin commitear).
+
+## F2a — Room builder con sugerencias
+
+- El configurador pasa de "casas modelo" a **room builder**: 3 templates de partida (depto, casa, desde cero) con editor 2D en DOM y preview 3D data-driven que se arma en vivo.
+- **Motor de sugerencias** por tipo de ambiente: tabla de automatización recomendada según el espacio.
+- Borrador **anónimo en `localStorage`** (`nexo-casa-draft`) y API `window.nexoConfigurador.getState()` — sin cuenta.
+- Landing de NexoHome actualizada al builder; F2b (plano como base) y F2c (DXF) quedan como teasers, F3 como futuro.

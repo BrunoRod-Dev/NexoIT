@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Configurador 3D · NexoHome</title>
-  <meta name="description" content="Armá tu casa inteligente en 3D: elegí el modelo, activá iluminación, climatización, seguridad y energía, y mirá el resultado.">
+  <meta name="description" content="Armá tu casa en 2D, mirala en 3D y llevate una propuesta de domótica por ambiente. Sin cuenta y sin instalar nada.">
   <meta property="og:title" content="Configurador 3D · NexoHome">
-  <meta property="og:description" content="Elegí el modelo de vivienda, activá las capas de domótica y mirá tu casa en 3D.">
+  <meta property="og:description" content="Dibujá tus ambientes, mirá la casa en 3D y elegí qué automatizar en cada uno.">
   <meta property="og:type" content="website">
   <!-- TODO: reemplazar — theme-color provisional (acompaña la paleta v2) -->
   <meta name="theme-color" content="#0b1220">
@@ -24,18 +24,52 @@
 
   <style>
     /* Layout exclusivo del configurador: usa tokens del sitio, no los modifica. */
-    .config-hero {
-      padding-block-start: clamp(var(--space-5), 5vw, var(--space-7));
+    .builder-step {
+      margin-block-end: clamp(var(--space-6), 5vw, var(--space-7));
     }
 
-    .house-switch {
+    .builder-step:last-child {
+      margin-block-end: 0;
+    }
+
+    .builder-step__title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-block-end: var(--space-3);
+      font-size: 1.1875rem;
+    }
+
+    .builder-step__num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      inline-size: 1.75rem;
+      block-size: 1.75rem;
+      border-radius: 50%;
+      background-color: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.8125rem;
+      font-weight: 700;
+    }
+
+    .draft-hint {
+      margin-block: 0 var(--space-4);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-sm);
+      background-color: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.875rem;
+    }
+
+    /* Paso 1 */
+    .template-row {
       display: flex;
       flex-wrap: wrap;
       gap: var(--space-2);
-      margin-block-end: var(--space-4);
     }
 
-    .house-switch__btn {
+    .template-btn {
       min-block-size: 2.75rem;
       padding: var(--space-2) var(--space-4);
       border: 1px solid var(--color-border-strong);
@@ -48,17 +82,195 @@
       cursor: pointer;
     }
 
-    .house-switch__btn[aria-pressed="true"] {
+    .template-btn[aria-pressed="true"] {
       border-color: var(--accent);
       background-color: var(--accent-soft);
       color: var(--accent);
     }
 
-    .config-grid {
+    /* Paso 2 */
+    .builder-grid {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
       gap: var(--space-4);
       align-items: start;
+    }
+
+    .builder-plan {
+      display: grid;
+      gap: var(--space-3);
+      min-inline-size: 0;
+    }
+
+    .plan {
+      position: relative;
+      inline-size: 100%;
+      aspect-ratio: 12 / 10;
+      background-color: #0c1424;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      touch-action: none;
+      background-image:
+        linear-gradient(to right, rgba(230, 240, 255, 0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(230, 240, 255, 0.07) 1px, transparent 1px);
+      background-size: 4.1667% 5%;
+    }
+
+    .plan-empty {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: var(--space-4);
+      color: var(--color-muted);
+      font-size: 0.9375rem;
+      text-align: center;
+    }
+
+    .room {
+      position: absolute;
+      display: grid;
+      align-content: start;
+      gap: 2px;
+      padding: 0.35rem 0.45rem;
+      border: 1px solid var(--room-border, rgba(230, 240, 255, 0.35));
+      border-radius: 5px;
+      background-color: var(--room-bg, rgba(230, 240, 255, 0.06));
+      color: var(--color-text);
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.15;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    .room.is-selected {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      z-index: 3;
+    }
+
+    .room__name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .room__size {
+      color: var(--color-muted);
+      font-size: 0.68rem;
+      font-weight: 500;
+    }
+
+    .room__handle {
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      inline-size: 14px;
+      block-size: 14px;
+      border-radius: 4px;
+      background-color: var(--accent);
+      cursor: nwse-resize;
+    }
+
+    .room[data-tipo="dormitorio"] { --room-bg: rgba(96, 165, 250, 0.14); --room-border: rgba(96, 165, 250, 0.5); }
+    .room[data-tipo="living"] { --room-bg: rgba(45, 212, 191, 0.13); --room-border: rgba(45, 212, 191, 0.5); }
+    .room[data-tipo="cocina"] { --room-bg: rgba(74, 222, 128, 0.13); --room-border: rgba(74, 222, 128, 0.5); }
+    .room[data-tipo="bano"] { --room-bg: rgba(56, 189, 248, 0.14); --room-border: rgba(56, 189, 248, 0.5); }
+    .room[data-tipo="oficina"] { --room-bg: rgba(167, 139, 250, 0.14); --room-border: rgba(167, 139, 250, 0.5); }
+    .room[data-tipo="garage"] { --room-bg: rgba(148, 163, 184, 0.16); --room-border: rgba(148, 163, 184, 0.5); }
+    .room[data-tipo="exterior"] { --room-bg: rgba(251, 191, 36, 0.12); --room-border: rgba(251, 191, 36, 0.45); }
+
+    .palette {
+      display: grid;
+      gap: var(--space-2);
+    }
+
+    .palette__label {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .palette__btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .palette__btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      min-block-size: 2.25rem;
+      padding: var(--space-1) var(--space-3);
+      border: 1px solid var(--color-border-strong);
+      border-radius: 999px;
+      background-color: transparent;
+      color: var(--color-text);
+      font: inherit;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .palette__btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .palette__dot {
+      inline-size: 0.5rem;
+      block-size: 0.5rem;
+      border-radius: 50%;
+      background-color: var(--dot, var(--accent));
+    }
+
+    .palette__dot--dormitorio { --dot: #60a5fa; }
+    .palette__dot--living { --dot: #2dd4bf; }
+    .palette__dot--cocina { --dot: #4ade80; }
+    .palette__dot--bano { --dot: #38bdf8; }
+    .palette__dot--oficina { --dot: #a78bfa; }
+    .palette__dot--garage { --dot: #94a3b8; }
+    .palette__dot--exterior { --dot: #fbbf24; }
+
+    .props {
+      padding: var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background-color: var(--color-surface);
+    }
+
+    .props__title {
+      margin: 0 0 var(--space-3);
+      font-size: 0.9375rem;
+      font-weight: 650;
+    }
+
+    .props__hint {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: 0.9375rem;
+    }
+
+    .props .field {
+      margin-block-end: var(--space-3);
+    }
+
+    .props__meta {
+      margin: 0 0 var(--space-3);
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+    }
+
+    .props__actions {
+      display: flex;
+      justify-content: flex-start;
     }
 
     .config-stage {
@@ -69,7 +281,7 @@
 
     .config-canvas {
       inline-size: 100%;
-      block-size: clamp(320px, 60vh, 560px);
+      block-size: clamp(320px, 55vh, 460px);
       border: 1px solid var(--color-border);
       border-radius: var(--radius);
       background-color: #0b1220;
@@ -88,115 +300,81 @@
       font-size: 0.8125rem;
     }
 
-    .config-side {
+    /* Paso 3 */
+    .suggestions {
       display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
       gap: var(--space-4);
     }
 
-    .config-toggles {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-2);
+    .suggest-empty {
+      margin: 0;
+      color: var(--color-muted);
     }
 
-    .config-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      min-block-size: 2.5rem;
-      padding: var(--space-2) var(--space-4);
-      border: 1px solid var(--color-border-strong);
-      border-radius: 999px;
-      background-color: transparent;
-      color: var(--color-text);
-      font: inherit;
+    .suggest-card {
+      padding: var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background-color: var(--color-surface);
+      transition: border-color 0.2s ease;
+    }
+
+    .suggest-card:hover {
+      border-color: var(--accent);
+    }
+
+    .suggest-card__title {
+      margin: 0 0 var(--space-2);
       font-size: 0.9375rem;
-      font-weight: 600;
+    }
+
+    .suggest-list {
+      display: grid;
+      gap: var(--space-2);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .suggest-item {
+      display: grid;
+      grid-template-columns: auto auto 1fr;
+      align-items: start;
+      gap: var(--space-2);
       cursor: pointer;
     }
 
-    .config-toggle__dot {
+    .suggest-item input {
+      margin-block-start: 0.15rem;
+      accent-color: var(--accent);
+    }
+
+    .dot {
       inline-size: 0.5rem;
       block-size: 0.5rem;
+      margin-block-start: 0.4rem;
       border-radius: 50%;
-      background-color: var(--dot);
-      opacity: 0.45;
-      transition: opacity 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .config-toggle[aria-pressed="true"] {
-      border-color: var(--dot);
-      background-color: var(--color-surface);
-    }
-
-    .config-toggle[aria-pressed="true"] .config-toggle__dot {
-      opacity: 1;
-      box-shadow: 0 0 10px var(--dot);
-    }
-
-    .config-toggle--iluminacion { --dot: #2dd4bf; }
-    .config-toggle--clima { --dot: #60a5fa; }
-    .config-toggle--seguridad { --dot: #f87171; }
-    .config-toggle--energia { --dot: #4ade80; }
-
-    .config-panel {
-      padding: var(--space-5);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius);
-      background-color: var(--color-surface);
-    }
-
-    .config-panel__row {
+    .suggest-item__text {
       display: grid;
-      gap: var(--space-1);
-      padding-block: var(--space-3);
-      border-block-end: 1px solid var(--color-border);
+      gap: 2px;
+      font-size: 0.875rem;
     }
 
-    .config-panel__row:last-child {
-      padding-block-end: 0;
-      border-block-end: 0;
+    .suggest-item__text strong {
+      font-weight: 600;
     }
 
-    .config-panel__head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: var(--space-3);
-      margin: 0;
-      font-weight: 650;
-    }
-
-    .config-panel__name {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      margin: 0;
-    }
-
-    .config-panel__dot {
-      inline-size: 0.5rem;
-      block-size: 0.5rem;
-      border-radius: 50%;
-      background-color: var(--dot);
-    }
-
-    .config-panel__count {
-      margin: 0;
+    .suggest-item__text span {
       color: var(--color-muted);
       font-size: 0.8125rem;
-      font-variant-numeric: tabular-nums;
     }
 
-    .config-panel__desc {
-      margin: 0;
-      color: var(--color-muted);
-      font-size: 0.9375rem;
-    }
-
-    .config-panel__empty {
-      margin: 0;
-      color: var(--color-muted);
+    .totals {
+      margin-block: var(--space-4) var(--space-3);
+      font-weight: 600;
     }
 
     .config-cta {
@@ -205,20 +383,19 @@
       justify-items: start;
     }
 
-    .config-cta .btn--accent {
-      background-color: var(--accent);
-      color: var(--accent-contrast);
-    }
-
     .config-teaser {
       margin: 0;
       color: var(--color-muted);
       font-size: 0.8125rem;
     }
 
+    body.is-dragging {
+      cursor: grabbing;
+    }
+
     @media (min-width: 62rem) {
-      .config-grid {
-        grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+      .builder-grid {
+        grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
       }
 
       .config-canvas {
@@ -249,50 +426,68 @@
   </header>
 
   <main id="contenido">
-    <section class="section config-hero" aria-labelledby="config-title">
+    <section class="section builder" aria-labelledby="builder-title">
       <div class="section__head">
         <p class="badge">Configurador 3D</p>
-        <h1 class="section__title" id="config-title">Armá tu NexoHome</h1>
-        <p class="section__lead">Elegí el modelo, activá las capas de domótica y mirá cómo queda. Sin cuenta, sin instalar nada.</p>
+        <h1 class="section__title" id="builder-title">Armá tu NexoHome</h1>
+        <p class="section__lead">Empezá por una base, dibujá tus ambientes y llevate una propuesta de domótica. Sin cuenta, sin instalar nada.</p>
       </div>
 
-      <div class="house-switch" role="group" aria-label="Modelo de vivienda">
-        <button class="house-switch__btn" type="button" data-house="depto" aria-pressed="true">Depto 2 amb · 45 m²</button>
-        <button class="house-switch__btn" type="button" data-house="casa" aria-pressed="false">Casa 3 dorm · 90 m²</button>
-      </div>
+      <p class="draft-hint" id="draft-hint" hidden></p>
 
-      <div class="config-grid">
-        <div class="config-stage">
-          <div id="config-canvas" class="config-canvas" role="img" aria-label="Vista 3D de la vivienda con los dispositivos activos"></div>
-          <p class="config-hint">Arrastrá para rotar · scroll para acercar. Las capas activas se iluminan en la escena.</p>
-          <noscript>
-            <p class="config-hint">Este configurador necesita JavaScript para mostrar la vista 3D.</p>
-          </noscript>
+      <div class="builder-step">
+        <h2 class="builder-step__title"><span class="builder-step__num" aria-hidden="true">1</span>Partí de una base</h2>
+        <div class="template-row" role="group" aria-label="Plantillas de vivienda">
+          <button class="template-btn" type="button" data-template="depto" aria-pressed="false">Depto 2 amb · 45 m²</button>
+          <button class="template-btn" type="button" data-template="casa" aria-pressed="false">Casa 3 dorm · 90 m²</button>
+          <button class="template-btn" type="button" data-template="cero" aria-pressed="false">Desde cero</button>
         </div>
+      </div>
 
-        <aside class="config-side" aria-label="Capas de domótica y resumen">
-          <div class="config-toggles" role="group" aria-label="Capas de domótica">
-            <button class="config-toggle config-toggle--iluminacion" type="button" data-cat="iluminacion" aria-pressed="true">
-              <span class="config-toggle__dot" aria-hidden="true"></span>Iluminación
-            </button>
-            <button class="config-toggle config-toggle--clima" type="button" data-cat="clima" aria-pressed="false">
-              <span class="config-toggle__dot" aria-hidden="true"></span>Climatización
-            </button>
-            <button class="config-toggle config-toggle--seguridad" type="button" data-cat="seguridad" aria-pressed="false">
-              <span class="config-toggle__dot" aria-hidden="true"></span>Seguridad
-            </button>
-            <button class="config-toggle config-toggle--energia" type="button" data-cat="energia" aria-pressed="false">
-              <span class="config-toggle__dot" aria-hidden="true"></span>Energía
-            </button>
+      <div class="builder-step">
+        <h2 class="builder-step__title"><span class="builder-step__num" aria-hidden="true">2</span>Armá tu casa</h2>
+
+        <div class="builder-grid">
+          <div class="builder-plan">
+            <div class="plan" id="plan" role="application"
+                 aria-label="Plano 2D de 12 por 10 metros. Recorré los ambientes con Tab y movelos con las flechas."></div>
+
+            <div class="palette" role="group" aria-label="Agregar ambiente">
+              <p class="palette__label">Agregar ambiente</p>
+              <div class="palette__btns">
+                <button class="palette__btn" type="button" data-add="dormitorio"><span class="palette__dot palette__dot--dormitorio" aria-hidden="true"></span>Dormitorio</button>
+                <button class="palette__btn" type="button" data-add="living"><span class="palette__dot palette__dot--living" aria-hidden="true"></span>Living-Comedor</button>
+                <button class="palette__btn" type="button" data-add="cocina"><span class="palette__dot palette__dot--cocina" aria-hidden="true"></span>Cocina</button>
+                <button class="palette__btn" type="button" data-add="bano"><span class="palette__dot palette__dot--bano" aria-hidden="true"></span>Baño</button>
+                <button class="palette__btn" type="button" data-add="oficina"><span class="palette__dot palette__dot--oficina" aria-hidden="true"></span>Oficina</button>
+                <button class="palette__btn" type="button" data-add="garage"><span class="palette__dot palette__dot--garage" aria-hidden="true"></span>Garage</button>
+                <button class="palette__btn" type="button" data-add="exterior"><span class="palette__dot palette__dot--exterior" aria-hidden="true"></span>Exterior</button>
+              </div>
+            </div>
+
+            <div class="props" id="props" aria-live="polite"></div>
           </div>
 
-          <div class="config-panel" id="config-panel" aria-live="polite"></div>
-
-          <div class="config-cta">
-            <a class="btn btn--accent" href="../../index.html#contacto">Solicitar presupuesto con esta selección</a>
-            <p class="config-teaser">Próximamente: guardá tu diseño con tu cuenta.</p>
+          <div class="config-stage">
+            <div id="config-canvas" class="config-canvas" role="img"
+                 aria-label="Vista 3D de tu casa con los ambientes y los dispositivos aceptados"></div>
+            <p class="config-hint">Arrastrá para rotar · scroll para acercar. La vista se actualiza con cada cambio.</p>
           </div>
-        </aside>
+        </div>
+      </div>
+
+      <div class="builder-step">
+        <h2 class="builder-step__title"><span class="builder-step__num" aria-hidden="true">3</span>Nuestras sugerencias</h2>
+        <p class="section__lead">Por cada ambiente te proponemos lo que suele tener sentido. Destildá lo que no quieras.</p>
+
+        <div class="suggestions" id="suggestions"></div>
+        <p class="totals" id="totals" aria-live="polite"></p>
+
+        <div class="config-cta">
+          <a class="btn btn--accent" href="../../index.html#contacto">Solicitar presupuesto con esta selección</a>
+          <p class="config-teaser">Próximamente: guardá tu diseño con tu cuenta.</p>
+          <button class="btn btn--ghost" type="button" id="reset-draft">Empezar de nuevo</button>
+        </div>
       </div>
     </section>
   </main>
