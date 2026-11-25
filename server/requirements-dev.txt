@@ -1,0 +1,6 @@
+# httpx2 NO es un typo de httpx: Starlette 1.10 hace `import httpx2 as httpx`
+# en su TestClient y sólo cae a `httpx` con un warning de deprecación.
+# Paquete real: "The next generation HTTP client" — https://github.com/pydantic/httpx2
+# (Tom Christie / pydantic, BSD-3-Clause).
+pytest==9.2.0
+httpx2==2.16.2

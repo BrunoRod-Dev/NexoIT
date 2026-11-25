@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
+import time
+from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote, urlparse
@@ -53,6 +56,81 @@ if not SECRET_KEY:
         )
 
 SESSION_MAX_AGE = 60 * 60 * 8  # 8 horas
+
+# --- Rate limiting (en memoria, por proceso) --------------------------------
+# Límites por IP. En producción multi-worker habría que usar Redis u otro
+# almacén compartido; para un único proceso alcanza.
+RATE_LIMITS = {
+    "consultas": {"limit": 10, "window": 60},  # 10 por minuto
+    "registro": {"limit": 5, "window": 3600},  # 5 por hora
+    "login": {"limit": 10, "window": 600},  # 10 cada 10 minutos
+}
+
+RATE_LIMIT_MESSAGES = {
+    "consultas": "Demasiadas consultas en poco tiempo. Esperá un momento.",
+    "registro": "Demasiados registros desde esta conexión. Esperá un rato y probá de nuevo.",
+    "login": "Demasiados intentos. Esperá unos minutos y probá de nuevo.",
+}
+
+
+class RateLimiter:
+    """Ventana deslizante por clave (IP), en memoria y con purga periódica."""
+
+    PURGE_EVERY_SECONDS = 300
+
+    def __init__(self, limit: int, window: int) -> None:
+        self.limit = limit
+        self.window = window
+        self._hits: dict[str, deque[float]] = {}
+        self._lock = threading.Lock()
+        self._last_purge = time.monotonic()
+
+    def allow(self, key: str) -> bool:
+        now = time.monotonic()
+        with self._lock:
+            self._purge(now)
+            bucket = self._hits.setdefault(key, deque())
+            while bucket and bucket[0] <= now - self.window:
+                bucket.popleft()
+            if len(bucket) >= self.limit:
+                return False
+            bucket.append(now)
+            return True
+
+    def reset(self) -> None:
+        with self._lock:
+            self._hits.clear()
+            self._last_purge = time.monotonic()
+
+    def _purge(self, now: float) -> None:
+        if now - self._last_purge < self.PURGE_EVERY_SECONDS:
+            return
+        for key in list(self._hits):
+            bucket = self._hits[key]
+            while bucket and bucket[0] <= now - self.window:
+                bucket.popleft()
+            if not bucket:
+                del self._hits[key]
+        self._last_purge = now
+
+
+_limiters = {
+    name: RateLimiter(cfg["limit"], cfg["window"]) for name, cfg in RATE_LIMITS.items()
+}
+
+
+def reset_rate_limits() -> None:
+    """Limpia los contadores (útil para tests y reinicios de proceso)."""
+    for limiter in _limiters.values():
+        limiter.reset()
+
+
+def client_ip(request: Request) -> str:
+    return request.client.host if request.client else "desconocido"
+
+
+def rate_limited(request: Request, bucket: str) -> bool:
+    return not _limiters[bucket].allow(client_ip(request))
 
 
 @asynccontextmanager
@@ -97,6 +175,15 @@ async def revalidate_assets(request: Request, call_next):
     path = request.url.path
     if path in NO_CACHE_PATHS or path.startswith(NO_CACHE_PREFIXES):
         response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     return response
 
 # Sitio: sólo assets estáticos + páginas whitelisteadas (nunca el repo entero).
@@ -173,6 +260,12 @@ def site_home_configurador() -> FileResponse:
 @app.post("/consultas", status_code=201)
 async def create_consulta(request: Request, db: Session = Depends(get_db)):
     """Recibe una consulta del hub. Anónima o vinculada a la sesión actual."""
+    if rate_limited(request, "consultas"):
+        return JSONResponse(
+            {"ok": False, "error": RATE_LIMIT_MESSAGES["consultas"]},
+            status_code=429,
+        )
+
     if not same_origin(request):
         return JSONResponse(
             {"ok": False, "error": "Origen no permitido."}, status_code=403
@@ -231,12 +324,16 @@ def app_root() -> RedirectResponse:
 def login_form(
     request: Request,
     next: str = "",
+    error: str = "",
     db: Session = Depends(get_db),
 ):
     user = auth.current_user(request, db)
     if user is not None:
         return RedirectResponse(safe_next(next), status_code=302)
-    return render(request, "login.html", next_url=safe_next(next), email="")
+    message = RATE_LIMIT_MESSAGES["login"] if error == "rate_limit" else ""
+    return render(
+        request, "login.html", next_url=safe_next(next), email="", error=message
+    )
 
 
 @app.post("/app/login", response_class=HTMLResponse)
@@ -249,6 +346,9 @@ def login_submit(
     db: Session = Depends(get_db),
 ):
     target = safe_next(next)
+    if rate_limited(request, "login"):
+        return RedirectResponse("/app/login?error=rate_limit", status_code=302)
+
     if not auth.verify_csrf(request, csrf_token):
         return render(
             request,
@@ -275,11 +375,12 @@ def login_submit(
 
 
 @app.get("/app/registro", response_class=HTMLResponse)
-def register_form(request: Request, db: Session = Depends(get_db)):
+def register_form(request: Request, error: str = "", db: Session = Depends(get_db)):
     user = auth.current_user(request, db)
     if user is not None:
         return RedirectResponse("/app/perfil", status_code=302)
-    return render(request, "registro.html", nombre="", email="")
+    message = RATE_LIMIT_MESSAGES["registro"] if error == "rate_limit" else ""
+    return render(request, "registro.html", nombre="", email="", error=message)
 
 
 @app.post("/app/registro", response_class=HTMLResponse)
@@ -293,6 +394,9 @@ def register_submit(
 ):
     nombre = (nombre or "").strip()
     email = auth.normalize_email(email)
+
+    if rate_limited(request, "registro"):
+        return RedirectResponse("/app/registro?error=rate_limit", status_code=302)
 
     def fail(message: str, status_code: int = 400):
         return render(

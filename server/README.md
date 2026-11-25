@@ -105,15 +105,29 @@ Abrir <http://127.0.0.1:8000/> (sitio) y <http://127.0.0.1:8000/app/registro>
 - **Superficie**: no se monta el repo raíz; sólo `/assets` y tres páginas
   explícitas con `FileResponse`. `/server/**` y `*.sqlite3` devuelven 404.
 - **OpenAPI**: deshabilitado (`docs_url=None`).
+- **Rate limiting** (en memoria, por IP y por proceso):
+  `POST /consultas` **10/min**, `POST /app/registro` **5/hora**,
+  `POST /app/login` **10 cada 10 min**. Al exceder: JSON **429** en consultas y
+  redirect con mensaje genérico en login/registro (sin revelar si el email existe).
+  Los límites son constantes (`RATE_LIMITS`) al inicio de `main.py`. Con más de
+  un worker/proceso hace falta un almacén compartido (Redis): el conteo actual
+  no se comparte entre procesos. Detrás de un reverse proxy, `request.client.host`
+  es la IP del proxy: para limitar por IP real, arrancar uvicorn con
+  `--proxy-headers --forwarded-allow-ips=<proxy>` y confiar en el header.
+- **Headers de seguridad** en todas las respuestas:
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: strict-origin-when-cross-origin`.
 
 ## Pendiente / límites conocidos
 
 - **Verificación de email**: no hay envío SMTP; cualquier email con formato
   válido se acepta (verificación queda para una fase con proveedor de correo).
 - **Recuperación de contraseña**: no implementada.
-- **Rate limiting / bloqueo por intentos**: no implementado. Crítico antes de
-  exponer `POST /consultas` (público) o el login a internet: hoy se puede
-  inundar la tabla de consultas sin fricción.
+- **CSP**: no se agrega en esta ronda a propósito. El sitio y el configurador usan
+  estilos y scripts inline legítimos (SVG, `configurador.js`, `<style>` page-scoped),
+  por lo que una CSP necesita nonces/hashes y un estudio previo para no romper nada.
+- **Rate limiting distribuido**: el conteo es en memoria y por proceso; con varios
+  workers o réplicas hace falta Redis (o similar).
 - **Migraciones**: se usa `create_all`; para cambios de esquema conviene
   incorporar Alembic.
 - **SQLite**: sin WAL ni pool tuneado; suficiente para esta fase, no para alta
@@ -121,6 +135,20 @@ Abrir <http://127.0.0.1:8000/> (sitio) y <http://127.0.0.1:8000/app/registro>
 - **Tests**: la validación de esta fase fue manual (smoke tests con `curl`);
   falta una suite automatizada (`pytest` + `httpx`).
 - **Formulario del hub**: fase 1.2.
+
+## Tests
+
+```powershell
+pip install -r requirements-dev.txt
+python -m pytest tests/ -q
+```
+
+- La suite usa una **SQLite temporal** (`NEXOIT_DB` apunta a un archivo en
+  `%TEMP%`): nunca toca `server/app.sqlite3`.
+- `NEXOIT_SECRET_KEY` se setea a un valor de test antes de importar la app.
+- Los contadores de rate limit se reinician entre tests.
+- Cobertura: auth/roles, consultas (validaciones, origen, sesión, 429), estáticos
+  (200/404, headers, no-cache, noscript).
 
 ## Nota de ejecución
 
