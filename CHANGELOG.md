@@ -62,3 +62,10 @@ Historial por fases de NexoIT. Fuente de hashes/fechas: `git log --oneline`.
 - **Motor de sugerencias** por tipo de ambiente: tabla de automatización recomendada según el espacio.
 - Borrador **anónimo en `localStorage`** (`nexo-casa-draft`) y API `window.nexoConfigurador.getState()` — sin cuenta.
 - Landing de NexoHome actualizada al builder; F2b (plano como base) y F2c (DXF) quedan como teasers, F3 como futuro.
+
+## F2b — Plano como base del editor
+
+- Modo **"Subí tu plano"**: imagen (PNG/JPG) como base atenuada del editor para dibujar encima; PDF según soporte activo del vendor.
+- El plano se proyecta como **textura en el preview 3D** cuando aplica.
+- El draft en `localStorage` guarda la imagen **downscaleada** (~2.5 MB de límite práctico), sin cuenta.
+- El teaser de la landing pasa a feature real: "Subí tu plano y dibujá tus ambientes encima."

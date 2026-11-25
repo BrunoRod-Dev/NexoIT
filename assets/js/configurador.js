@@ -15,6 +15,12 @@
   var STORAGE_KEY = 'nexo-casa-draft';
   var AREA = { w: 12, d: 10, step: 0.5, min: 1.5, wallH: 1.1 };
 
+  var MAX_PLANO_CHARS = 2500000;
+  var MAX_PLANO_WIDTH = 1400;
+  var PDF_SCRIPT = '../../assets/vendor/pdf.min.js';
+  var PDF_WORKER = '../../assets/vendor/pdf.worker.min.js';
+  var pdfLibPromise = null;
+
   var CATS = {
     iluminacion: { label: 'Iluminación', hex: '#2dd4bf', color: 0x2dd4bf },
     clima: { label: 'Clima', hex: '#60a5fa', color: 0x60a5fa },
@@ -106,14 +112,21 @@
     ambientes: [],
     aceptadas: {},
     selectedId: null,
-    template: null
+    template: null,
+    plano: null
   };
+  var restoredOmitted = false;
 
   var planEl = plan;
   var propsEl = document.getElementById('props');
   var suggestionsEl = document.getElementById('suggestions');
   var totalsEl = document.getElementById('totals');
   var hintEl = document.getElementById('draft-hint');
+  var planStatusEl = document.getElementById('plan-status');
+  var planActionsEl = document.getElementById('plan-actions');
+  var planNameEl = document.getElementById('plan-name');
+  var planFileEl = document.getElementById('plan-file');
+  var planRemoveEl = document.getElementById('plan-remove');
   var templateButtons = [].slice.call(document.querySelectorAll('.template-btn'));
   var paletteButtons = [].slice.call(document.querySelectorAll('.palette__btn'));
 
@@ -215,18 +228,36 @@
     state.ambientes.forEach(function (room) {
       aceptadas[room.id] = (state.aceptadas[room.id] || []).slice();
     });
+
+    var plano = null;
+    var omitido = false;
+    if (state.plano) {
+      if (state.plano.dataUrl.length <= MAX_PLANO_CHARS) {
+        plano = state.plano;
+      } else {
+        omitido = true;
+      }
+    }
+
     return {
-      v: 1,
+      v: 2,
       template: state.template,
       ambientes: state.ambientes,
       aceptadas: aceptadas,
+      plano: plano,
+      planoOmitted: omitido,
       savedAt: Date.now()
     };
   }
 
   function saveDraft() {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize()));
+      var data = serialize();
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      if (data.planoOmitted && hintEl) {
+        hintEl.hidden = false;
+        hintEl.textContent = 'El plano no se guardó por tamaño; los ambientes sí.';
+      }
     } catch (err) {
       /* storage lleno o bloqueado: el configurador sigue funcionando */
     }
@@ -269,7 +300,22 @@
       });
       state.template = data.template || null;
       state.selectedId = restored.length ? restored[0].id : null;
-      return restored.length > 0;
+
+      state.plano = null;
+      if (
+        data.plano && typeof data.plano === 'object' &&
+        typeof data.plano.dataUrl === 'string' &&
+        /^data:image\/(png|jpeg);/.test(data.plano.dataUrl)
+      ) {
+        state.plano = {
+          nombre: String(data.plano.nombre || 'plano'),
+          dataUrl: data.plano.dataUrl,
+          w: Number(data.plano.w) || 0,
+          h: Number(data.plano.h) || 0
+        };
+      }
+      restoredOmitted = !!data.planoOmitted;
+      return restored.length > 0 || !!state.plano;
     } catch (err) {
       return false;
     }
@@ -281,6 +327,160 @@
     } catch (err) {
       /* noop */
     }
+  }
+
+  // --- Plano de fondo (imagen o primera página de PDF) -----------------------
+
+  function setPlanStatus(text, kind) {
+    if (!planStatusEl) return;
+    planStatusEl.className = 'plan-upload__status' + (kind ? ' is-' + kind : '');
+    planStatusEl.textContent = text;
+  }
+
+  function renderPlanoUI() {
+    if (!planActionsEl || !planNameEl) return;
+    if (state.plano) {
+      planActionsEl.hidden = false;
+      planNameEl.textContent = state.plano.nombre;
+    } else {
+      planActionsEl.hidden = true;
+      planNameEl.textContent = '';
+    }
+  }
+
+  function canvasToPlan(canvas) {
+    return {
+      dataUrl: canvas.toDataURL('image/jpeg', 0.8),
+      w: canvas.width,
+      h: canvas.height
+    };
+  }
+
+  function readImageFile(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var scale = Math.min(1, MAX_PLANO_WIDTH / img.naturalWidth);
+        var w = Math.max(1, Math.round(img.naturalWidth * scale));
+        var h = Math.max(1, Math.round(img.naturalHeight * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvasToPlan(canvas));
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error('No pudimos leer la imagen.'));
+      };
+      img.src = url;
+    });
+  }
+
+  function loadPdfLib() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (pdfLibPromise) return pdfLibPromise;
+    pdfLibPromise = new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = PDF_SCRIPT;
+      script.onload = function () {
+        if (!window.pdfjsLib) {
+          reject(new Error('No pudimos cargar el lector de PDF.'));
+          return;
+        }
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
+        resolve(window.pdfjsLib);
+      };
+      script.onerror = function () {
+        reject(new Error('No pudimos cargar el lector de PDF.'));
+      };
+      document.head.appendChild(script);
+    });
+    return pdfLibPromise;
+  }
+
+  function readPdfFile(file) {
+    return loadPdfLib()
+      .then(function (lib) {
+        return file.arrayBuffer().then(function (buffer) {
+          return lib.getDocument({ data: new Uint8Array(buffer) }).promise;
+        });
+      })
+      .then(function (pdf) {
+        return pdf.getPage(1).then(function (page) {
+          var base = page.getViewport({ scale: 1 });
+          var scale = Math.min(2, MAX_PLANO_WIDTH / base.width);
+          var viewport = page.getViewport({ scale: scale });
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.round(viewport.width);
+          canvas.height = Math.round(viewport.height);
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          return page.render({ canvasContext: ctx, viewport: viewport }).promise.then(function () {
+            return canvasToPlan(canvas);
+          });
+        });
+      })
+      .catch(function () {
+        throw new Error('Para PDF: exportá la primera página como imagen (PNG o JPG).');
+      });
+  }
+
+  function handlePlanFile(file) {
+    var name = (file && file.name) || 'plano';
+    if (!file || !file.size) {
+      setPlanStatus('No pudimos leer el archivo.', 'error');
+      return;
+    }
+    var isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(name);
+    var isImage = /^image\/(png|jpeg)$/.test(file.type) || /\.(png|jpe?g)$/i.test(name);
+    if (!isPdf && !isImage) {
+      setPlanStatus('Formato no soportado. Subí PNG, JPG o PDF.', 'error');
+      return;
+    }
+
+    setPlanStatus('Procesando plano…', '');
+    var task = isPdf ? readPdfFile(file) : readImageFile(file);
+
+    task
+      .then(function (result) {
+        state.plano = { nombre: name, dataUrl: result.dataUrl, w: result.w, h: result.h };
+        state.ambientes = [];
+        state.aceptadas = {};
+        state.selectedId = null;
+        state.template = null;
+        syncTemplates();
+        renderPlanoUI();
+        renderPlan();
+        renderProps();
+        renderSuggestions();
+        renderTotals();
+        schedule3D();
+        saveDraft();
+        setPlanStatus('Plano cargado: ' + name, 'ok');
+      })
+      .catch(function (err) {
+        setPlanStatus(
+          err && err.message ? err.message : 'No pudimos leer el archivo.',
+          'error'
+        );
+      });
+  }
+
+  function clearPlano() {
+    if (!state.plano) return;
+    state.plano = null;
+    renderPlanoUI();
+    renderPlan();
+    schedule3D();
+    saveDraft();
+    setPlanStatus('Plano quitado.', '');
   }
 
   // --- Render 2D -------------------------------------------------------------
@@ -308,6 +508,15 @@
 
   function renderPlan() {
     planEl.innerHTML = '';
+
+    if (state.plano) {
+      var bg = document.createElement('img');
+      bg.className = 'plan__bg';
+      bg.alt = '';
+      bg.setAttribute('aria-hidden', 'true');
+      bg.src = state.plano.dataUrl;
+      planEl.appendChild(bg);
+    }
 
     if (!state.ambientes.length) {
       var empty = document.createElement('p');
@@ -635,6 +844,9 @@
 
   function loadTemplate(id) {
     var list = TEMPLATES[id] || [];
+    state.plano = null;
+    renderPlanoUI();
+    setPlanStatus('', '');
     state.ambientes = list.map(function (r) {
       var room = normalizeRoom({ tipo: r.tipo, nombre: r.nombre, x: r.x, y: r.y, w: r.w, h: r.h });
       state.aceptadas[room.id] = defaultsFor(room.tipo);
@@ -656,7 +868,10 @@
     state.aceptadas = {};
     state.selectedId = null;
     state.template = null;
+    state.plano = null;
     clearDraft();
+    renderPlanoUI();
+    setPlanStatus('', '');
     if (hintEl) {
       hintEl.hidden = false;
       hintEl.textContent = 'Empezaste de cero. Elegí una plantilla o agregá ambientes.';
@@ -785,6 +1000,18 @@
     resetBtn.addEventListener('click', resetAll);
   }
 
+  if (planFileEl) {
+    planFileEl.addEventListener('change', function () {
+      var file = planFileEl.files && planFileEl.files[0];
+      planFileEl.value = '';
+      if (file) handlePlanFile(file);
+    });
+  }
+
+  if (planRemoveEl) {
+    planRemoveEl.addEventListener('click', clearPlano);
+  }
+
   // --- 3D --------------------------------------------------------------------
 
   var scene;
@@ -889,8 +1116,43 @@
     });
   }
 
+  var sceneGen = 0;
+
+  function addPlanGround(gen) {
+    var plano = state.plano;
+    if (!plano) return;
+    new THREE.TextureLoader().load(plano.dataUrl, function (texture) {
+      if (gen !== sceneGen || !root) {
+        texture.dispose();
+        return;
+      }
+      if (THREE.sRGBEncoding) texture.encoding = THREE.sRGBEncoding;
+      var ratio = plano.w && plano.h ? plano.w / plano.h : AREA.w / AREA.d;
+      var pw = AREA.w + 0.4;
+      var ph = AREA.d + 0.4;
+      if (pw / ph > ratio) {
+        pw = ph * ratio;
+      } else {
+        ph = pw / ratio;
+      }
+      var mat = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false
+      });
+      var plane = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), mat);
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.set(AREA.w / 2, -0.135, AREA.d / 2);
+      root.add(plane);
+      stats.meshes += 1;
+    });
+  }
+
   function rebuildScene() {
     disposeRoot();
+    sceneGen += 1;
+    var gen = sceneGen;
     root = new THREE.Group();
 
     var wallMat = new THREE.MeshStandardMaterial({
@@ -903,6 +1165,8 @@
     state.ambientes.forEach(function (room) {
       buildRoom3D(room, wallMat, edgeMat);
     });
+
+    if (state.plano) addPlanGround(gen);
 
     scene.add(root);
     stats = { meshes: 0, sprites: 0 };
@@ -1011,6 +1275,14 @@
         totals: t,
         selectedId: state.selectedId,
         template: state.template,
+        plano: state.plano
+          ? {
+              nombre: state.plano.nombre,
+              dataUrl: state.plano.dataUrl,
+              w: state.plano.w,
+              h: state.plano.h
+            }
+          : null,
         meshes: { total: stats.meshes, sprites: stats.sprites },
         reducedMotion: REDUCED,
         canvas: renderer
@@ -1033,11 +1305,17 @@
   renderProps();
   renderSuggestions();
   renderTotals();
+  renderPlanoUI();
   init();
 
-  if (restored && hintEl) {
+  if (restoredOmitted && hintEl) {
     hintEl.hidden = false;
-    hintEl.textContent = 'Recuperamos tu última casa.';
+    hintEl.textContent = 'El plano no se guardó por tamaño; los ambientes sí.';
+  } else if (restored && hintEl) {
+    hintEl.hidden = false;
+    hintEl.textContent = state.plano
+      ? 'Recuperamos tu última casa y tu plano.'
+      : 'Recuperamos tu última casa.';
   }
 
   function ensureAceptadasAll() {

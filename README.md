@@ -77,7 +77,7 @@ Themes: `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --accent: 
 ### Reglas
 
 - **Clase nueva solo si ninguna existente la cubre.**
-- **Presupuesto < 50 KB** de CSS+JS combinados del sitio de marketing, cero recursos externos, system fonts. **Exclusión:** `assets/vendor/three.min.js`, `assets/vendor/OrbitControls.js` y `assets/js/configurador.js` solo cargan en `/home/configurador/`, nunca en la landing.
+- **Presupuesto < 50 KB** de CSS+JS combinados del sitio de marketing, cero recursos externos, system fonts. **Exclusión:** `assets/vendor/three.min.js`, `assets/vendor/OrbitControls.js`, `assets/vendor/pdf.min.js` + `pdf.worker.min.js` y `assets/js/configurador.js` solo cargan en `/home/configurador/`, nunca en la landing.
 - **Header:** un solo relleno por pantalla (Hablemos); navegación y divisiones en links quietos con dot de color; cero botones en el header. **Hero del hub:** variante definitiva abstracta (`hero-abstracto.svg`); la familia fue descartada (vive en el historial de git).
 - **Animaciones page-scoped** en un `<style>` de página (ej.: diagrama "Cómo funciona" de Grow); la regla global `prefers-reduced-motion` de `base.css` neutraliza toda animación (`animation-duration: .01ms !important`), sin guard local por página.
 - **Links:** solo hub ↔ divisiones, sin cross-links entre divisiones; las subpáginas de una división (p. ej. `home/configurador/`) se enlazan desde su propia landing.
@@ -108,11 +108,13 @@ Themes: `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --accent: 
 
 El configurador evolucionó de "casas modelo" a **room builder**: 3 templates de partida (depto, casa, desde cero), editor 2D en DOM + preview 3D data-driven y un motor de sugerencias por tipo de ambiente (tabla de automatización recomendada). Anónimo y sin cuenta: el borrador vive en `localStorage` (`nexo-casa-draft`) y el estado se lee con `window.nexoConfigurador.getState()`.
 
+**Modo "Subí tu plano":** la imagen (PNG/JPG nativas; PDF de la primera página vía **pdf.js 3.11.174 vendoreado con carga diferida** — sólo se descarga al subir un PDF) entra como base atenuada del editor para dibujar encima, con proyección como textura en el preview 3D cuando aplica; el draft guarda la imagen downscaleada (~2.5 MB de límite práctico).
+
 **Clases page-scoped del builder** (definidas en el `<style>` de `home/configurador/index.html`, mismo patrón que `.flow*`; no integran el inventario del contrato): `.builder-step*`, `.template-*`, `.builder-grid/.builder-plan/.plan*`, `.room*` (+ colores por `data-tipo`), `.palette*`, `.props*`, `.suggest*`, `.totals`, `.config-cta/.config-teaser`, `.draft-hint`, `body.is-dragging`; con una MQ propia `min-width: 62rem`.
 
 ### Roadmap
 
-- **F2b:** subir tu plano como base del editor (teaser en la landing).
+- **F2b:** subir tu plano como base del editor — **hecho**.
 - **F2c:** importación DXF automática (con `ezdxf`).
 - **F3:** guardar diseño con cuenta + consulta estructurada en el admin.
 
