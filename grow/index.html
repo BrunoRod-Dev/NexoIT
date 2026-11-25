@@ -15,13 +15,102 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <style>
+    /* Layout exclusivo de "Cómo funciona": usa tokens del sitio, no los modifica. */
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-4) var(--space-3);
+    }
+
+    .flow__step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      text-align: center;
+    }
+
+    .flow__step .badge {
+      margin-block-end: 0;
+    }
+
+    .flow__circle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      inline-size: 3rem;
+      block-size: 3rem;
+      color: var(--accent);
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border-strong);
+      border-radius: 50%;
+      animation: flow-pulse 3s ease-in-out infinite;
+    }
+
+    .flow__circle svg {
+      inline-size: 1.35rem;
+      block-size: 1.35rem;
+    }
+
+    .flow__arrow {
+      color: var(--color-muted);
+    }
+
+    .flow__arrow svg {
+      inline-size: 1.75rem;
+      block-size: 1.75rem;
+    }
+
+    .flow__arrow path {
+      stroke-dasharray: 6 5;
+      animation: flow-dash 2s linear infinite;
+    }
+
+    @keyframes flow-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    @keyframes flow-dash {
+      to { stroke-dashoffset: -11; }
+    }
+
+    /* Móvil: el flujo se apila verticalmente. */
+    @media (max-width: 47.99rem) {
+      .flow {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .flow__step {
+        flex-direction: row;
+        align-items: center;
+        gap: var(--space-3);
+        text-align: start;
+      }
+
+      .flow__arrow {
+        margin-inline-start: 1.1rem;
+        transform: rotate(90deg);
+      }
+    }
+  </style>
   <script src="../assets/js/main.js" defer></script>
 </head>
 <body class="theme--grow">
   <header class="site-header">
     <div class="site-header__inner">
       <span class="site-header__brand">NexoGrow</span>
-      <nav class="nav" aria-label="Principal">
+
+      <button class="nav__toggle" type="button" data-toggle="menu" aria-controls="nav-principal" aria-expanded="false" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+        </svg>
+      </button>
+
+      <nav class="nav" id="nav-principal" aria-label="Principal">
         <a class="nav__link" href="../index.html">← Volver a NexoIT</a>
         <a class="nav__link" href="#capacidades">Capacidades</a>
         <a class="nav__link" href="#contacto">Contacto</a>
@@ -69,6 +158,39 @@
       </div>
     </section>
 
+    <section class="section" id="como-funciona">
+      <div class="section__head">
+        <h2 class="section__title">Cómo funciona</h2>
+        <p class="section__lead">Cinco pasos, de los sensores a tu dashboard.</p>
+      </div>
+      <div class="flow">
+        <div class="flow__step">
+          <span class="flow__circle"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span class="badge">Sensores y cámaras</span>
+        </div>
+        <span class="flow__arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 7l5 5-5 5"/></svg></span>
+        <div class="flow__step">
+          <span class="flow__circle"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg></span>
+          <span class="badge">IA que observa</span>
+        </div>
+        <span class="flow__arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 7l5 5-5 5"/></svg></span>
+        <div class="flow__step">
+          <span class="flow__circle"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+          <span class="badge">Reglas seguras</span>
+        </div>
+        <span class="flow__arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 7l5 5-5 5"/></svg></span>
+        <div class="flow__step">
+          <span class="flow__circle"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></span>
+          <span class="badge">Riego y nutrientes A/B</span>
+        </div>
+        <span class="flow__arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 7l5 5-5 5"/></svg></span>
+        <div class="flow__step">
+          <span class="flow__circle"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></span>
+          <span class="badge">Tu dashboard</span>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="seguridad">
       <div class="section__head">
         <h2 class="section__title">Seguridad por diseño</h2>
@@ -93,6 +215,28 @@
         <p class="section__lead">Estamos construyendo las primeras unidades de NexoGrow. Si querés ser de los primeros: contanos qué querés cultivar y configuramos juntos tu sistema.</p>
       </div>
       <div class="contact" id="contacto">
+        <form data-module="contacto-form" novalidate>
+          <div class="field">
+            <label class="field__label" for="consulta-nombre">Nombre</label>
+            <input class="field__input" type="text" id="consulta-nombre" name="nombre" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="consulta-email">Email</label>
+            <input class="field__input" type="email" id="consulta-email" name="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="consulta-mensaje">Consulta</label>
+            <textarea class="field__input" id="consulta-mensaje" name="mensaje" rows="5" required placeholder="Contanos qué querés cultivar y cuánto espacio tenés."></textarea>
+          </div>
+          <button class="btn btn--primary" type="submit">Enviar consulta</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+          <noscript>
+            <p class="form-status">El form necesita JavaScript — usá los accesos directos de abajo.</p>
+          </noscript>
+        </form>
+
+        <p>¿Preferís directo?</p>
+
         <div class="contact__actions">
           <!-- TODO: reemplazar (datos de contacto: mailto / wa.me) -->
           <a class="btn btn--accent" href="mailto:hola@nexoit.com">Contanos tu cultivo</a>

@@ -21,7 +21,14 @@
   <header class="site-header">
     <div class="site-header__inner">
       <span class="site-header__brand">NexoHome</span>
-      <nav class="nav" aria-label="Principal">
+
+      <button class="nav__toggle" type="button" data-toggle="menu" aria-controls="nav-principal" aria-expanded="false" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+        </svg>
+      </button>
+
+      <nav class="nav" id="nav-principal" aria-label="Principal">
         <a class="nav__link" href="../index.html">← Volver a NexoIT</a>
         <a class="nav__link" href="#capacidades">Capacidades</a>
         <a class="nav__link" href="#como-trabajamos">Cómo trabajamos</a>
@@ -120,6 +127,28 @@
         <p class="section__lead">Contanos qué querés automatizar y coordinamos un diagnóstico.</p>
       </div>
       <div class="contact">
+        <form data-module="contacto-form" novalidate>
+          <div class="field">
+            <label class="field__label" for="consulta-nombre">Nombre</label>
+            <input class="field__input" type="text" id="consulta-nombre" name="nombre" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="consulta-email">Email</label>
+            <input class="field__input" type="email" id="consulta-email" name="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="consulta-mensaje">Consulta</label>
+            <textarea class="field__input" id="consulta-mensaje" name="mensaje" rows="5" required placeholder="Contanos qué querés automatizar en tu casa."></textarea>
+          </div>
+          <button class="btn btn--primary" type="submit">Enviar consulta</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+          <noscript>
+            <p class="form-status">El form necesita JavaScript — usá los accesos directos de abajo.</p>
+          </noscript>
+        </form>
+
+        <p>¿Preferís directo?</p>
+
         <div class="contact__actions">
           <!-- TODO: reemplazar (datos de contacto: mailto / wa.me) -->
           <a class="btn btn--accent" href="mailto:hola@nexoit.com">Escribinos</a>

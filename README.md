@@ -64,7 +64,9 @@ Themes (v2): `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --acc
 
 `main.js` es un registry de `data-modules`; funciona igual si la página no tiene `data-modules` (importarlo no rompe nada).
 
-Módulos: `header` (estado de scroll) y `contacto-form` (`data-module="contacto-form"` en la sección `#contacto` del hub): intercepta el submit y hace `POST /consultas` con JSON `{nombre, email, mensaje}`, pintando el resultado en `.form-status` — **201** → `.form-status--ok` "¡Consulta enviada!" + `form.reset()`; **400** → `.form-status--error` con el mensaje del server; fallo de red/respuesta inesperada → error genérico local. Flujo: form → API `/consultas` → DB → perfil del usuario / admin. **Sin JS: el form no envía; mailto y WhatsApp siguen como base funcional** (conservados visibles como alternativa).
+Módulos: `header` (estado de scroll) y `contacto-form` (`data-module="contacto-form"` en la sección `#contacto` de las 3 páginas: hub, `grow/` y `home/` — mismo módulo y mismo endpoint): intercepta el submit y hace `POST /consultas` con JSON `{nombre, email, mensaje}`, pintando el resultado en `.form-status` — **201** → `.form-status--ok` "¡Consulta enviada!" + `form.reset()`; **400** → `.form-status--error` con el mensaje del server; fallo de red/respuesta inesperada → error genérico local. Flujo: form → API `/consultas` → DB → perfil del usuario / admin. **Sin JS: el form no envía; mailto y WhatsApp siguen como base funcional** (conservados visibles como alternativa, con `<noscript>` apuntando a ellos).
+
+**Animaciones de página:** `grow/` incluye la sección "Cómo funciona" con un diagrama de 5 nodos animado (dash marchando en los conectores + pulso lento de nodos) resuelto con un `<style>` page-scoped — patrón del configurador, cero cambios en `components.css` y clases propias de la página (`.flow*`). La regla global `prefers-reduced-motion` de `base.css` neutraliza toda animación de página (`animation-duration: .01ms !important`), por lo que no se repite un guard local.
 
 ## Triggers de refactor acordados
 
