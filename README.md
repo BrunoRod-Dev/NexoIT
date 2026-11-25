@@ -60,6 +60,8 @@ Themes (v2): `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --acc
 
 **Regla de diseño del header:** un solo relleno por pantalla (Hablemos); navegación y divisiones en links quietos con dot de color; cero botones en el header.
 
+**Hero del hub:** variante definitiva: abstracto (`hero-abstracto.svg`); la familia fue descartada (vive en historial de git).
+
 `main.js` es un registry de `data-modules`; funciona igual si la página no tiene `data-modules` (importarlo no rompe nada).
 
 Módulos: `header` (estado de scroll) y `contacto-form` (`data-module="contacto-form"` en la sección `#contacto` del hub): intercepta el submit y hace `POST /consultas` con JSON `{nombre, email, mensaje}`, pintando el resultado en `.form-status` — **201** → `.form-status--ok` "¡Consulta enviada!" + `form.reset()`; **400** → `.form-status--error` con el mensaje del server; fallo de red/respuesta inesperada → error genérico local. Flujo: form → API `/consultas` → DB → perfil del usuario / admin. **Sin JS: el form no envía; mailto y WhatsApp siguen como base funcional** (conservados visibles como alternativa).
@@ -95,11 +97,14 @@ Página pública en `home/configurador/`: dos casas modelo con toggles de Ilumin
 
 ## Pendientes (TODOs)
 
+- [x] Imágenes OG: **resueltas** — existen `assets/img/og-nexoit.png`, `og-grow.png` y `og-home.png` (dark, 1200×630) y quedan declaradas en cada página.
+- [ ] `og:image` con URL absoluta cuando se defina el dominio público (WhatsApp y otros scrapers la requieren; hoy las rutas son relativas).
 - [ ] Email real (hoy: `hola@nexoit.com` de ejemplo).
 - [ ] WhatsApp real (botón/canal de contacto).
 - [ ] Teléfono del JSON-LD (hoy placeholder `+54 9 11 0000-0000`, lo maneja `index.html` del hub).
-- [ ] Imágenes OG: `assets/img/og-nexoit.png` (hub), `assets/img/og-grow.png` y `assets/img/og-home.png` (hoy sin `og:image`; deberán seguir el estilo dark `#0b1220`).
-- [ ] Contenido complementario de las landings v3 de `grow/` y `home/` (precios, casos, FAQ según corresponda).
+- [ ] SMTP verificación (el envío real del form de contacto).
+- [ ] Rate-limit en Redis (endpoint `POST /consultas`).
+- [ ] CSP (cabecera `Content-Security-Policy`).
 
 ## Workflow
 
