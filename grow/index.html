@@ -9,6 +9,17 @@
   <meta property="og:description" content="NexoGrow — huerta inteligente: riego y nutrientes automatizados, monitoreo visual con IA y alertas, funciona sin internet.">
   <meta property="og:image" content="../assets/img/og-grow.png">
   <meta property="og:image:alt" content="NexoGrow — cultivo personalizado con IA">
+  <meta property="og:url" content="https://brunorod-dev.github.io/NexoIT/grow/index.html">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "NexoGrow — Cultivo personalizado con IA",
+    "description": "NexoGrow — huerta inteligente: riego y nutrientes automatizados, monitoreo visual con IA y alertas, funciona sin internet.",
+    "inLanguage": "es",
+    "url": "https://brunorod-dev.github.io/NexoIT/grow/index.html"
+  }
+  </script>
   <!-- TODO: provisional hasta definir paleta final -->
   <meta name="theme-color" content="#0b1220">
   <link rel="icon" href="../assets/img/favicon.svg">
@@ -77,8 +88,8 @@
       to { stroke-dashoffset: -11; }
     }
 
-    /* Móvil: el flujo se apila verticalmente. */
-    @media (max-width: 47.99rem) {
+    /* Móvil: el flujo se apila verticalmente (hasta 1023px, donde la fila de 5 nodos no entra entera). */
+    @media (max-width: 63.99rem) {
       .flow {
         flex-direction: column;
         align-items: flex-start;

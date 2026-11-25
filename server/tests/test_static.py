@@ -43,3 +43,17 @@ def test_noscript_en_el_hub(client):
     html = client.get("/").text
     assert "<noscript>" in html
     assert "El form necesita JavaScript" in html
+
+def test_sitemap(client):
+    response = client.get("/sitemap.xml")
+    assert response.status_code == 200
+    assert "urlset" in response.text
+    assert "https://brunorod-dev.github.io/NexoIT/" in response.text
+    assert "/app/" not in response.text
+
+
+def test_robots(client):
+    response = client.get("/robots.txt")
+    assert response.status_code == 200
+    assert "Disallow: /app/" in response.text
+    assert "Sitemap: https://brunorod-dev.github.io/NexoIT/sitemap.xml" in response.text

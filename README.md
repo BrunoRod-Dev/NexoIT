@@ -100,7 +100,7 @@ Página pública en `home/configurador/`: dos casas modelo con toggles de Ilumin
 ## Pendientes (TODOs)
 
 - [x] Imágenes OG: **resueltas** — existen `assets/img/og-nexoit.png`, `og-grow.png` y `og-home.png` (dark, 1200×630) y quedan declaradas en cada página.
-- [ ] `og:image` con URL absoluta cuando se defina el dominio público (WhatsApp y otros scrapers la requieren; hoy las rutas son relativas).
+- [ ] Dominio final: actualizar `sitemap.xml`, `robots.txt`, `og:url` y `og:image` a URLs absolutas (hoy: rutas relativas + URL predecible `https://brunorod-dev.github.io/NexoIT/`; WhatsApp y otros scrapers requieren absolutas).
 - [ ] Email real (hoy: `hola@nexoit.com` de ejemplo).
 - [ ] WhatsApp real (botón/canal de contacto).
 - [ ] Teléfono del JSON-LD (hoy placeholder `+54 9 11 0000-0000`, lo maneja `index.html` del hub).
@@ -112,4 +112,5 @@ Página pública en `home/configurador/`: dos casas modelo con toggles de Ilumin
 
 - **Branches cortas + PRs**: una rama por tarea acotada, revisión y merge.
 - **Deploy**: GitHub Pages desde `main`.
+- **Sitemap/robots**: existen `sitemap.xml` y `robots.txt` con la URL predecible de Pages (`https://brunorod-dev.github.io/NexoIT/`); hay que actualizarlos si cambia el dominio.
 - **Cache de dev**: el server pide revalidación de assets (`Cache-Control: no-cache`); GitHub Pages cachea por su cuenta (~10 min).

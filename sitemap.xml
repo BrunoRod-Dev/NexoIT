@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NexoIT · sitemap
+  Base absoluta: GitHub Pages desde la rama main (https://brunorod-dev.github.io/NexoIT/).
+  Si el dominio o el repositorio cambian, actualizar los <loc>, robots.txt y og:url del hub.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://brunorod-dev.github.io/NexoIT/</loc>
+    <lastmod>2026-11-25</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://brunorod-dev.github.io/NexoIT/grow/index.html</loc>
+    <lastmod>2026-11-25</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://brunorod-dev.github.io/NexoIT/home/index.html</loc>
+    <lastmod>2026-11-25</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://brunorod-dev.github.io/NexoIT/home/configurador/index.html</loc>
+    <lastmod>2026-11-25</lastmod>
+    <priority>0.6</priority>
+  </url>
+</urlset>

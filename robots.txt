@@ -1,0 +1,8 @@
+# NexoIT · robots.txt
+# Base absoluta: GitHub Pages desde main. Si el dominio cambia, actualizar este archivo,
+# sitemap.xml y og:url del hub.
+User-agent: *
+Allow: /
+Disallow: /app/
+
+Sitemap: https://brunorod-dev.github.io/NexoIT/sitemap.xml

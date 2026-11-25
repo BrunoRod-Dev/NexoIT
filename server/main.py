@@ -254,6 +254,16 @@ def site_home_configurador() -> FileResponse:
     return FileResponse(SITE_DIR / "home" / "configurador" / "index.html")
 
 
+@app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
+def site_sitemap() -> FileResponse:
+    return FileResponse(SITE_DIR / "sitemap.xml", media_type="application/xml")
+
+
+@app.api_route("/robots.txt", methods=["GET", "HEAD"], include_in_schema=False)
+def site_robots() -> FileResponse:
+    return FileResponse(SITE_DIR / "robots.txt", media_type="text/plain")
+
+
 # --- Consultas desde el sitio (endpoint público) ---------------------------
 
 
