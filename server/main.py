@@ -78,6 +78,27 @@ app.add_middleware(
     https_only=False,  # poner en True detrás de HTTPS
 )
 
+# --- Revalidación de HTML y assets -----------------------------------------
+# Evita que el navegador sirva JS/CSS viejo tras un deploy: el cliente siempre
+# revalida (los estáticos responden 304 barato vía ETag/Last-Modified).
+NO_CACHE_PATHS = {
+    "/",
+    "/index.html",
+    "/grow/index.html",
+    "/home/index.html",
+    "/home/configurador/index.html",
+}
+NO_CACHE_PREFIXES = ("/assets/", "/static/", "/app")
+
+
+@app.middleware("http")
+async def revalidate_assets(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path in NO_CACHE_PATHS or path.startswith(NO_CACHE_PREFIXES):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 # Sitio: sólo assets estáticos + páginas whitelisteadas (nunca el repo entero).
 app.mount("/assets", StaticFiles(directory=SITE_DIR / "assets"), name="assets")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
@@ -117,29 +138,31 @@ def same_origin(request: Request) -> bool:
 # --- Sitio estático (whitelist) --------------------------------------------
 
 
-@app.get("/", include_in_schema=False)
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 def site_index() -> FileResponse:
     return FileResponse(SITE_DIR / "index.html")
 
 
-@app.get("/index.html", include_in_schema=False)
+@app.api_route("/index.html", methods=["GET", "HEAD"], include_in_schema=False)
 def site_index_explicit() -> FileResponse:
     # Alias explícito: los links "Volver a NexoIT" apuntan a /index.html y
     # ../index.html; bajo file:// funciona, bajo el server necesita esta ruta.
     return FileResponse(SITE_DIR / "index.html")
 
 
-@app.get("/grow/index.html", include_in_schema=False)
+@app.api_route("/grow/index.html", methods=["GET", "HEAD"], include_in_schema=False)
 def site_grow() -> FileResponse:
     return FileResponse(SITE_DIR / "grow" / "index.html")
 
 
-@app.get("/home/index.html", include_in_schema=False)
+@app.api_route("/home/index.html", methods=["GET", "HEAD"], include_in_schema=False)
 def site_home() -> FileResponse:
     return FileResponse(SITE_DIR / "home" / "index.html")
 
 
-@app.get("/home/configurador/index.html", include_in_schema=False)
+@app.api_route(
+    "/home/configurador/index.html", methods=["GET", "HEAD"], include_in_schema=False
+)
 def site_home_configurador() -> FileResponse:
     return FileResponse(SITE_DIR / "home" / "configurador" / "index.html")
 

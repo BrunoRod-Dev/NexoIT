@@ -105,3 +105,4 @@ Página pública en `home/configurador/`: dos casas modelo con toggles de Ilumin
 
 - **Branches cortas + PRs**: una rama por tarea acotada, revisión y merge.
 - **Deploy**: GitHub Pages desde `main`.
+- **Cache de dev**: el server pide revalidación de assets (`Cache-Control: no-cache`); GitHub Pages cachea por su cuenta (~10 min).
