@@ -16,7 +16,8 @@ NexoIT/
 ├── grow/
 │   └── index.html          # Landing NexoGrow (cultivo con IA)
 ├── home/
-│   └── index.html          # Landing NexoHome (domótica)
+│   ├── index.html          # Landing NexoHome (domótica)
+│   └── configurador/       # Configurador 3D público (casas modelo, toggles en 3D)
 └── assets/
     ├── css/
     │   ├── tokens.css      # Variables de diseño + themes por división
@@ -73,11 +74,24 @@ Módulos: `header` (estado de scroll) y `contacto-form` (`data-module="contacto-
 - CSS + JS combinados: **< 50 KB**.
 - **Cero recursos externos** (sin CDNs, fuentes ni scripts de terceros).
 - **System fonts** (`--font-sans` apunta a la pila del sistema).
+- Exclusión del configurador: los assets de vendor (`assets/vendor/three.min.js`, `OrbitControls.js`) y `assets/js/configurador.js` se excluyen del presupuesto <50KB: solo cargan en `/home/configurador/`, nunca en la landing. El presupuesto rige el CSS+JS del sitio de marketing.
 
 ## Regla de links
 
 - Solo **hub ↔ divisiones**: desde el hub a `grow/` y `home/`, y desde cada división de vuelta al hub (`../`).
 - **Sin cross-links** entre divisiones.
+- Las subpáginas de una división (p. ej. `home/configurador/`) se enlazan desde su propia landing; nunca entre divisiones.
+
+## Configurador 3D
+
+Página pública en `home/configurador/`: dos casas modelo con toggles de Iluminación / Climatización / Seguridad / Energía y panel resumen, todo en 3D desde el navegador y sin cuenta. Colores por categoría (referencia del contrato visual):
+
+- **Iluminación** `#2dd4bf` · **Climatización** `#60a5fa` · **Seguridad** `#f87171` · **Energía** `#4ade80`.
+
+### Fases futuras
+
+- **F2:** upload de plano propio + guardar diseño con cuenta.
+- **F3:** selección de lo configurado → consulta automática en el admin.
 
 ## Pendientes (TODOs)
 

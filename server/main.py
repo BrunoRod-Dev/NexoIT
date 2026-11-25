@@ -139,6 +139,11 @@ def site_home() -> FileResponse:
     return FileResponse(SITE_DIR / "home" / "index.html")
 
 
+@app.get("/home/configurador/index.html", include_in_schema=False)
+def site_home_configurador() -> FileResponse:
+    return FileResponse(SITE_DIR / "home" / "configurador" / "index.html")
+
+
 # --- Consultas desde el sitio (endpoint público) ---------------------------
 
 

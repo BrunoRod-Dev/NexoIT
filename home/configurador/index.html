@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Configurador 3D · NexoHome</title>
+  <meta name="description" content="Armá tu casa inteligente en 3D: elegí el modelo, activá iluminación, climatización, seguridad y energía, y mirá el resultado.">
+  <meta property="og:title" content="Configurador 3D · NexoHome">
+  <meta property="og:description" content="Elegí el modelo de vivienda, activá las capas de domótica y mirá tu casa en 3D.">
+  <meta property="og:type" content="website">
+  <!-- TODO: reemplazar — theme-color provisional (acompaña la paleta v2) -->
+  <meta name="theme-color" content="#0b1220">
+
+  <link rel="icon" href="../../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../assets/css/tokens.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+
+  <script src="../../assets/vendor/three.min.js" defer></script>
+  <script src="../../assets/vendor/OrbitControls.js" defer></script>
+  <script src="../../assets/js/configurador.js" defer></script>
+
+  <style>
+    /* Layout exclusivo del configurador: usa tokens del sitio, no los modifica. */
+    .config-hero {
+      padding-block-start: clamp(var(--space-5), 5vw, var(--space-7));
+    }
+
+    .house-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-block-end: var(--space-4);
+    }
+
+    .house-switch__btn {
+      min-block-size: 2.75rem;
+      padding: var(--space-2) var(--space-4);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      background-color: transparent;
+      color: var(--color-text);
+      font: inherit;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .house-switch__btn[aria-pressed="true"] {
+      border-color: var(--accent);
+      background-color: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+    }
+
+    .config-stage {
+      display: grid;
+      gap: var(--space-2);
+      min-inline-size: 0;
+    }
+
+    .config-canvas {
+      inline-size: 100%;
+      block-size: clamp(320px, 60vh, 560px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background-color: #0b1220;
+      overflow: hidden;
+    }
+
+    .config-canvas canvas {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+    }
+
+    .config-hint {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+    }
+
+    .config-side {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .config-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .config-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      min-block-size: 2.5rem;
+      padding: var(--space-2) var(--space-4);
+      border: 1px solid var(--color-border-strong);
+      border-radius: 999px;
+      background-color: transparent;
+      color: var(--color-text);
+      font: inherit;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .config-toggle__dot {
+      inline-size: 0.5rem;
+      block-size: 0.5rem;
+      border-radius: 50%;
+      background-color: var(--dot);
+      opacity: 0.45;
+      transition: opacity 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .config-toggle[aria-pressed="true"] {
+      border-color: var(--dot);
+      background-color: var(--color-surface);
+    }
+
+    .config-toggle[aria-pressed="true"] .config-toggle__dot {
+      opacity: 1;
+      box-shadow: 0 0 10px var(--dot);
+    }
+
+    .config-toggle--iluminacion { --dot: #2dd4bf; }
+    .config-toggle--clima { --dot: #60a5fa; }
+    .config-toggle--seguridad { --dot: #f87171; }
+    .config-toggle--energia { --dot: #4ade80; }
+
+    .config-panel {
+      padding: var(--space-5);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background-color: var(--color-surface);
+    }
+
+    .config-panel__row {
+      display: grid;
+      gap: var(--space-1);
+      padding-block: var(--space-3);
+      border-block-end: 1px solid var(--color-border);
+    }
+
+    .config-panel__row:last-child {
+      padding-block-end: 0;
+      border-block-end: 0;
+    }
+
+    .config-panel__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin: 0;
+      font-weight: 650;
+    }
+
+    .config-panel__name {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin: 0;
+    }
+
+    .config-panel__dot {
+      inline-size: 0.5rem;
+      block-size: 0.5rem;
+      border-radius: 50%;
+      background-color: var(--dot);
+    }
+
+    .config-panel__count {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .config-panel__desc {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: 0.9375rem;
+    }
+
+    .config-panel__empty {
+      margin: 0;
+      color: var(--color-muted);
+    }
+
+    .config-cta {
+      display: grid;
+      gap: var(--space-2);
+      justify-items: start;
+    }
+
+    .config-cta .btn--accent {
+      background-color: var(--accent);
+      color: var(--accent-contrast);
+    }
+
+    .config-teaser {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+    }
+
+    @media (min-width: 62rem) {
+      .config-grid {
+        grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+      }
+
+      .config-canvas {
+        block-size: clamp(420px, 62vh, 620px);
+      }
+    }
+  </style>
+</head>
+
+<body class="theme--home">
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="site-header__brand">NexoHome</span>
+      <nav class="nav" aria-label="Principal">
+        <a class="nav__link" href="../index.html">← NexoHome</a>
+        <a class="nav__link" href="/app/login">Ingresar</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <section class="section config-hero" aria-labelledby="config-title">
+      <div class="section__head">
+        <p class="badge">Configurador 3D</p>
+        <h1 class="section__title" id="config-title">Armá tu NexoHome</h1>
+        <p class="section__lead">Elegí el modelo, activá las capas de domótica y mirá cómo queda. Sin cuenta, sin instalar nada.</p>
+      </div>
+
+      <div class="house-switch" role="group" aria-label="Modelo de vivienda">
+        <button class="house-switch__btn" type="button" data-house="depto" aria-pressed="true">Depto 2 amb · 45 m²</button>
+        <button class="house-switch__btn" type="button" data-house="casa" aria-pressed="false">Casa 3 dorm · 90 m²</button>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-stage">
+          <div id="config-canvas" class="config-canvas" role="img" aria-label="Vista 3D de la vivienda con los dispositivos activos"></div>
+          <p class="config-hint">Arrastrá para rotar · scroll para acercar. Las capas activas se iluminan en la escena.</p>
+          <noscript>
+            <p class="config-hint">Este configurador necesita JavaScript para mostrar la vista 3D.</p>
+          </noscript>
+        </div>
+
+        <aside class="config-side" aria-label="Capas de domótica y resumen">
+          <div class="config-toggles" role="group" aria-label="Capas de domótica">
+            <button class="config-toggle config-toggle--iluminacion" type="button" data-cat="iluminacion" aria-pressed="true">
+              <span class="config-toggle__dot" aria-hidden="true"></span>Iluminación
+            </button>
+            <button class="config-toggle config-toggle--clima" type="button" data-cat="clima" aria-pressed="false">
+              <span class="config-toggle__dot" aria-hidden="true"></span>Climatización
+            </button>
+            <button class="config-toggle config-toggle--seguridad" type="button" data-cat="seguridad" aria-pressed="false">
+              <span class="config-toggle__dot" aria-hidden="true"></span>Seguridad
+            </button>
+            <button class="config-toggle config-toggle--energia" type="button" data-cat="energia" aria-pressed="false">
+              <span class="config-toggle__dot" aria-hidden="true"></span>Energía
+            </button>
+          </div>
+
+          <div class="config-panel" id="config-panel" aria-live="polite"></div>
+
+          <div class="config-cta">
+            <a class="btn btn--accent" href="../../index.html#contacto">Solicitar presupuesto con esta selección</a>
+            <p class="config-teaser">Próximamente: guardá tu diseño con tu cuenta.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__brand">
+      <span>NexoHome · configurador 3D</span>
+      <p>Iluminación, clima, seguridad y energía en un solo sistema.</p>
+    </div>
+
+    <nav class="site-footer__links" aria-label="Familia Nexo">
+      <a href="../../index.html">NexoIT</a>
+      <a href="../../grow/index.html">NexoGrow</a>
+      <a href="../index.html">NexoHome</a>
+    </nav>
+
+    <p class="site-footer__legal">© 2026 NexoIT</p>
+  </footer>
+</body>
+</html>
