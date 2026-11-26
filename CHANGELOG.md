@@ -83,3 +83,10 @@ Historial por fases de NexoIT. Fuente de hashes/fechas: `git log --oneline`.
 - **Cargar y reanudar:** endpoints `POST /app/guardar-diseno`, `GET /app/mis-disenos` y `GET /app/disenos/{id}`, sección **"Tus diseños"** en el perfil y arranque del configurador con `?diseno={id}`.
 - **CTA del configurador → presupuesto:** la consulta sale con la configuración adjunta y el admin ve el **resumen estructurado por consulta**.
 - **Mini-migración de `consultas.config_json`:** arranque seguro con DBs viejas, sin pasos manuales.
+
+## G1 — Guía rápida: drag & drop y demo animada
+
+- **Drop zone con routing inteligente:** la imagen/PDF abre el modo plano y el `.dxf` abre el modo CAD; el input de archivo queda intacto como vía accesible.
+- **Demo animada "Cómo cargo mi casa":** SVG+CSS, ~8 segundos, 4 escenas con captions.
+- Se muestra **una sola vez** en la primera visita (flag `nexo-guia-vista` en `localStorage`), con cierre por X o clic afuera.
+- Botón **"?"** en el header para reproducir la guía on-demand; no aparece si el usuario llega con `?diseno=`.

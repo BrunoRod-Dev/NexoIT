@@ -121,6 +121,8 @@ El configurador evolucionó de "casas modelo" a **room builder**: 3 templates de
 
 **Modo CAD (DXF):** subís el `.dxf` del arquitecto y el server lo analiza vía `POST /dxf-parse` con **ezdxf** (dependencia del backend en `server/requirements.txt`, no del front): los ambientes se detectan automáticamente por polilíneas cerradas + etiquetas (ES/EN), con unidades auto-detectadas (mm/cm/m por heurística). Después revisás tipos y posiciones, y las sugerencias corren igual. Límite 5 MB; si el DXF no trae polilíneas cerradas, fallback honesto a modo imagen.
 
+**Guía rápida:** podés **arrastrar y soltar** el archivo sobre el plano con **routing inteligente** — imagen/PDF abre el modo plano y `.dxf` abre el modo CAD (cada pipeline resuelve sus extensiones soportadas; el input de archivo queda intacto como vía accesible). La **demo animada "Cómo cargo mi casa"** (SVG+CSS, ~8 s, 4 escenas con captions) corre **una sola vez** en la primera visita — flag `nexo-guia-vista` en `localStorage` —, se cierra con la X o clic afuera, y el botón **"?"** del header la reproduce cuando quieras. No molesta: no aparece si llegás con `?diseno=` o si ya la viste.
+
 **Clases page-scoped del builder** (definidas en el `<style>` de `home/configurador/index.html`, mismo patrón que `.flow*`; no integran el inventario del contrato): `.builder-step*`, `.template-*`, `.builder-grid/.builder-plan/.plan*`, `.room*` (+ colores por `data-tipo`), `.palette*`, `.props*`, `.suggest*`, `.totals`, `.config-cta/.config-teaser`, `.draft-hint`, `body.is-dragging`; con una MQ propia `min-width: 62rem`.
 
 ### Roadmap

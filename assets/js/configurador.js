@@ -131,6 +131,12 @@
   var planRemoveEl = document.getElementById('plan-remove');
   var dxfFileEl = document.getElementById('dxf-file');
   var dxfFallbackEl = document.getElementById('dxf-fallback');
+  var planUploadEl = document.getElementById('plan-upload');
+  var guiaEl = document.getElementById('guia');
+  var guiaDemoEl = document.getElementById('guia-demo');
+  var guiaCaptionEl = document.getElementById('guia-caption');
+  var guiaCloseEl = document.getElementById('guia-close');
+  var guiaOpenEl = document.getElementById('guia-open');
   var budgetOpenEl = document.getElementById('budget-open');
   var budgetFormEl = document.getElementById('budget-form');
   var budgetStatusEl = document.getElementById('budget-status');
@@ -625,6 +631,179 @@
         );
         if (dxfFallbackEl) dxfFallbackEl.hidden = false;
       });
+  }
+
+  // --- G1: drag & drop real + guía "Cómo cargar mi casa" ---------------------
+
+  var GUIA_KEY = 'nexo-guia-vista';
+  var GUIA_CAPTIONS = [
+    'Arrastrá tu plano (o tocá “Subí tu plano”).',
+    'Dibujá tus ambientes encima.',
+    'Dibujá tus ambientes encima.',
+    'Activá lo que quieras y pedí el presupuesto.'
+  ];
+  var guiaStep = 0;
+  var guiaTimer = null;
+  var dropDepth = 0;
+
+  function dragHasFiles(event) {
+    var dt = event.dataTransfer;
+    if (!dt) return false;
+    var types = dt.types ? Array.prototype.slice.call(dt.types) : [];
+    return types.indexOf('Files') !== -1 || (dt.files && dt.files.length > 0);
+  }
+
+  function setDropping(active) {
+    if (planEl) planEl.classList.toggle('plan--dropping', active);
+    if (planUploadEl) planUploadEl.classList.toggle('plan-upload--dropping', active);
+  }
+
+  function resetDropping() {
+    dropDepth = 0;
+    setDropping(false);
+  }
+
+  function routeDroppedFile(file) {
+    if (!file || !file.size) {
+      setPlanStatus('No pudimos leer el archivo.', 'error');
+      return;
+    }
+    var name = (file.name || '').toLowerCase();
+    var type = file.type || '';
+    if (/\.dxf$/.test(name)) {
+      handleDxfFile(file);
+      return;
+    }
+    if (
+      /\.(png|jpe?g|pdf)$/.test(name) ||
+      /^image\/(png|jpeg)$/.test(type) ||
+      type === 'application/pdf'
+    ) {
+      handlePlanFile(file);
+      return;
+    }
+    setPlanStatus('Formato no soportado al soltar. Usá PNG, JPG, PDF o DXF.', 'error');
+  }
+
+  function onDragEnter(event) {
+    if (!dragHasFiles(event)) return;
+    event.preventDefault();
+    dropDepth += 1;
+    setDropping(true);
+  }
+
+  function onDragOver(event) {
+    event.preventDefault();
+    if (!dragHasFiles(event)) return;
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    setDropping(true);
+  }
+
+  function onDragLeave(event) {
+    if (!dropDepth) return;
+    event.preventDefault();
+    dropDepth = Math.max(0, dropDepth - 1);
+    if (!dropDepth) setDropping(false);
+  }
+
+  function onDrop(event) {
+    event.preventDefault();
+    if (!dragHasFiles(event)) return;
+    resetDropping();
+    var file = event.dataTransfer.files && event.dataTransfer.files[0];
+    if (file) routeDroppedFile(file);
+  }
+
+  function initDropZones() {
+    [planEl, planUploadEl].forEach(function (zone) {
+      if (!zone) return;
+      zone.addEventListener('dragenter', onDragEnter);
+      zone.addEventListener('dragover', onDragOver);
+      zone.addEventListener('dragleave', onDragLeave);
+      zone.addEventListener('drop', onDrop);
+    });
+    window.addEventListener('dragend', resetDropping);
+    window.addEventListener('blur', resetDropping);
+  }
+
+  function guiaSeen() {
+    try {
+      return window.localStorage.getItem(GUIA_KEY) === '1';
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function guiaRemember() {
+    try {
+      window.localStorage.setItem(GUIA_KEY, '1');
+    } catch (err) {
+      /* modo privado: la guía vuelve a aparecer en la próxima visita */
+    }
+  }
+
+  function guiaPlay() {
+    if (guiaDemoEl) {
+      guiaDemoEl.classList.remove('is-playing');
+      void guiaDemoEl.offsetWidth;
+      guiaDemoEl.classList.add('is-playing');
+    }
+    guiaStep = 0;
+    if (guiaCaptionEl) guiaCaptionEl.textContent = GUIA_CAPTIONS[0];
+    if (guiaTimer) window.clearInterval(guiaTimer);
+    guiaTimer = null;
+    if (!REDUCED) {
+      guiaTimer = window.setInterval(function () {
+        guiaStep = (guiaStep + 1) % GUIA_CAPTIONS.length;
+        if (guiaCaptionEl) guiaCaptionEl.textContent = GUIA_CAPTIONS[guiaStep];
+      }, 2000);
+    }
+  }
+
+  function guiaShow() {
+    if (!guiaEl) return;
+    guiaEl.hidden = false;
+    if (guiaOpenEl) guiaOpenEl.setAttribute('aria-expanded', 'true');
+    guiaPlay();
+  }
+
+  function guiaHide(remember) {
+    if (!guiaEl || guiaEl.hidden) return;
+    guiaEl.hidden = true;
+    if (guiaOpenEl) guiaOpenEl.setAttribute('aria-expanded', 'false');
+    if (guiaTimer) window.clearInterval(guiaTimer);
+    guiaTimer = null;
+    if (remember) guiaRemember();
+  }
+
+  function initGuia() {
+    if (guiaOpenEl) {
+      guiaOpenEl.addEventListener('click', function (event) {
+        event.stopPropagation();
+        if (guiaEl && !guiaEl.hidden) {
+          guiaPlay();
+          return;
+        }
+        guiaShow();
+      });
+    }
+
+    if (guiaCloseEl) {
+      guiaCloseEl.addEventListener('click', function () {
+        guiaHide(true);
+      });
+    }
+
+    document.addEventListener('click', function (event) {
+      if (!guiaEl || guiaEl.hidden) return;
+      if (guiaEl.contains(event.target)) return;
+      if (guiaOpenEl && guiaOpenEl.contains(event.target)) return;
+      guiaHide(true);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') guiaHide(true);
+    });
   }
 
   // --- F3: sesión, diseños guardados y presupuesto ---------------------------
@@ -1790,6 +1969,8 @@
   renderTotals();
   renderPlanoUI();
   initF3();
+  initDropZones();
+  initGuia();
   init();
 
   if (restoredOmitted && hintEl) {
@@ -1805,6 +1986,9 @@
   var params = new URLSearchParams(window.location.search);
   var disenoParam = params.get('diseno');
   if (disenoParam) loadDiseno(disenoParam);
+
+  // Primera visita: guía compacta. Con ?diseno= el usuario ya vino a lo suyo.
+  if (!disenoParam && !guiaSeen()) guiaShow();
 
   function ensureAceptadasAll() {
     state.ambientes.forEach(function (room) {

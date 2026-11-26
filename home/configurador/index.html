@@ -156,6 +156,44 @@
       overflow-wrap: anywhere;
     }
 
+    /* Drop de planos: una zona, dos pipelines (imagen/PDF y DXF). */
+    .plan--dropping {
+      border-color: var(--accent);
+      box-shadow:
+        0 0 0 2px rgba(45, 212, 191, 0.55),
+        0 0 28px rgba(45, 212, 191, 0.28);
+    }
+
+    .plan::before {
+      content: "Soltá tu plano acá";
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      display: grid;
+      place-items: center;
+      padding: var(--space-3);
+      background-color: rgba(11, 18, 32, 0.72);
+      color: var(--accent);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      text-align: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+
+    .plan--dropping::before {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .plan-upload--dropping {
+      outline: 2px dashed var(--accent);
+      outline-offset: 6px;
+      border-radius: var(--radius-sm);
+    }
+
     /* Paso 2 */
     .builder-grid {
       display: grid;
@@ -529,6 +567,207 @@
       cursor: grabbing;
     }
 
+    /* Guía "Cómo cargar mi casa": card flotante, demo SVG+CSS page-scoped. */
+    .guia {
+      position: fixed;
+      inset-block-start: 5rem;
+      inset-inline-end: clamp(0.75rem, 3vw, 2rem);
+      z-index: 60;
+      inline-size: min(21rem, calc(100vw - 1.5rem));
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background-color: rgba(13, 22, 39, 0.97);
+      box-shadow: 0 18px 40px rgba(2, 8, 20, 0.55);
+    }
+
+    .guia[hidden] {
+      display: none;
+    }
+
+    .guia__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+
+    .guia__title {
+      margin: 0;
+      font-size: 0.9375rem;
+      font-weight: 700;
+    }
+
+    .guia__close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      inline-size: 1.75rem;
+      block-size: 1.75rem;
+      border: 1px solid var(--color-border);
+      border-radius: 50%;
+      background: none;
+      color: var(--color-muted);
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .guia__close:hover,
+    .guia__close:focus-visible {
+      color: var(--color-text);
+      border-color: var(--accent);
+    }
+
+    .guia__demo {
+      margin-block: var(--space-2);
+      border-radius: var(--radius-sm);
+      background-color: #0a1220;
+      overflow: hidden;
+    }
+
+    .guia__demo svg {
+      display: block;
+      inline-size: 100%;
+      block-size: auto;
+    }
+
+    .guia__caption {
+      margin: 0;
+      min-block-size: 2.4em;
+      color: var(--accent);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .guia__hint {
+      margin: var(--space-1) 0 0;
+      color: var(--color-muted);
+      font-size: 0.75rem;
+    }
+
+    .guia__lbl {
+      fill: #93c5fd;
+      font-size: 9px;
+      font-weight: 600;
+      font-family: inherit;
+    }
+
+    .guia__scene {
+      opacity: 0;
+    }
+
+    .guia__scene--1 {
+      opacity: 1;
+    }
+
+    .guia__demo.is-playing .guia__scene--1 { animation: guia-scene-1 8s linear infinite; }
+    .guia__demo.is-playing .guia__scene--2 { animation: guia-scene-2 8s linear infinite; }
+    .guia__demo.is-playing .guia__scene--3 { animation: guia-scene-3 8s linear infinite; }
+    .guia__demo.is-playing .guia__scene--4 { animation: guia-scene-4 8s linear infinite; }
+
+    @keyframes guia-scene-1 {
+      0%, 24% { opacity: 1; }
+      25%, 100% { opacity: 0; }
+    }
+
+    @keyframes guia-scene-2 {
+      0%, 24% { opacity: 0; }
+      25%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    @keyframes guia-scene-3 {
+      0%, 49% { opacity: 0; }
+      50%, 74% { opacity: 1; }
+      75%, 100% { opacity: 0; }
+    }
+
+    @keyframes guia-scene-4 {
+      0%, 74% { opacity: 0; }
+      75%, 100% { opacity: 1; }
+    }
+
+    .guia__demo.is-playing .guia__file { animation: guia-file 8s ease-in-out infinite; }
+
+    @keyframes guia-file {
+      0% { transform: translate(0, 0); opacity: 1; }
+      14% { transform: translate(58px, 6px); opacity: 1; }
+      22% { transform: translate(58px, 6px); opacity: 0.35; }
+      24%, 100% { transform: translate(58px, 6px); opacity: 0; }
+    }
+
+    .guia__demo.is-playing .guia__dropzone { animation: guia-zone 8s ease-in-out infinite; }
+
+    @keyframes guia-zone {
+      0%, 10% { stroke-opacity: 0.5; stroke-width: 2; }
+      16%, 22% { stroke-opacity: 1; stroke-width: 3.5; }
+      25%, 100% { stroke-opacity: 0.5; stroke-width: 2; }
+    }
+
+    .guia__demo.is-playing .guia__grid { animation: guia-fade 8s ease infinite; }
+
+    @keyframes guia-fade {
+      0%, 25% { opacity: 0; }
+      33%, 100% { opacity: 1; }
+    }
+
+    .guia__demo.is-playing .guia__room { animation: guia-draw 8s ease-in-out infinite; }
+
+    @keyframes guia-draw {
+      0%, 50% { stroke-dashoffset: 340; }
+      62%, 100% { stroke-dashoffset: 0; }
+    }
+
+    .guia__demo.is-playing .guia__room-label { animation: guia-fade 8s ease infinite; }
+
+    .guia__demo.is-playing .guia__box { animation: guia-rise 8s ease-out infinite; }
+
+    .guia__demo.is-playing .guia__box--2 { animation-name: guia-rise-2; }
+    .guia__demo.is-playing .guia__box--3 { animation-name: guia-rise-3; }
+
+    @keyframes guia-rise {
+      0%, 75% { transform: translateY(12px); opacity: 0; }
+      84%, 100% { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes guia-rise-2 {
+      0%, 78% { transform: translateY(12px); opacity: 0; }
+      88%, 100% { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes guia-rise-3 {
+      0%, 81% { transform: translateY(12px); opacity: 0; }
+      91%, 100% { transform: translateY(0); opacity: 1; }
+    }
+
+    .guia__demo.is-playing .guia__check { animation: guia-check 8s ease-out infinite; }
+
+    @keyframes guia-check {
+      0%, 88% { opacity: 0; }
+      94%, 100% { opacity: 1; }
+    }
+
+    .guia-toggle {
+      inline-size: 1.9rem;
+      block-size: 1.9rem;
+      padding: 0;
+      border: 1px solid var(--color-border);
+      border-radius: 50%;
+      background: none;
+      color: var(--color-muted);
+      font: inherit;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .guia-toggle:hover,
+    .guia-toggle:focus-visible {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
     @media (min-width: 62rem) {
       .builder-grid {
         grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
@@ -556,6 +795,7 @@
 
       <nav class="nav" id="nav-principal" aria-label="Principal">
         <a class="nav__link" href="../index.html">← NexoHome</a>
+        <button class="guia-toggle" type="button" id="guia-open" aria-label="Cómo cargar mi casa" aria-controls="guia" aria-expanded="false">?</button>
         <a class="nav__link" href="/app/login">Ingresar</a>
       </nav>
     </div>
@@ -570,6 +810,69 @@
       </div>
 
       <p class="draft-hint" id="draft-hint" hidden></p>
+
+      <aside class="guia" id="guia" hidden aria-labelledby="guia-title">
+        <div class="guia__head">
+          <p class="guia__title" id="guia-title">Cómo cargar mi casa</p>
+          <button class="guia__close" type="button" id="guia-close" aria-label="Cerrar la guía">×</button>
+        </div>
+        <div class="guia__demo" id="guia-demo" aria-hidden="true">
+          <svg viewBox="0 0 320 170" role="presentation" focusable="false">
+            <rect x="0" y="0" width="320" height="170" fill="#0a1220"></rect>
+
+            <g class="guia__scene guia__scene--1">
+              <rect class="guia__dropzone" x="188" y="42" width="112" height="82" rx="10" fill="none" stroke="#2dd4bf" stroke-dasharray="7 6" stroke-width="2"></rect>
+              <text class="guia__lbl" x="244" y="140" text-anchor="middle">zona de carga</text>
+              <g class="guia__file">
+                <path d="M74 40h36l14 14v50H74z" fill="#0f1c33" stroke="#93c5fd" stroke-width="2"></path>
+                <path d="M110 40v14h14" fill="none" stroke="#93c5fd" stroke-width="2"></path>
+                <text class="guia__lbl" x="99" y="86" text-anchor="middle">plano.pdf</text>
+              </g>
+            </g>
+
+            <g class="guia__scene guia__scene--2">
+              <rect x="76" y="30" width="168" height="110" rx="6" fill="#0c1424" stroke="#3b82f6" stroke-width="2"></rect>
+              <g class="guia__grid" stroke="#1e3a5f" stroke-width="1">
+                <path d="M104 30v110M132 30v110M160 30v110M188 30v110M216 30v110M76 52h168M76 74h168M76 96h168M76 118h168"></path>
+              </g>
+              <text class="guia__lbl" x="160" y="158" text-anchor="middle">tu plano, atenuado</text>
+            </g>
+
+            <g class="guia__scene guia__scene--3">
+              <rect x="76" y="26" width="168" height="112" rx="6" fill="#0c1424" stroke="#334155" stroke-width="1"></rect>
+              <rect class="guia__room" x="88" y="38" width="68" height="88" rx="4" fill="rgba(37,99,235,.22)" stroke="#60a5fa" stroke-width="2" stroke-dasharray="340"></rect>
+              <rect class="guia__room" x="164" y="38" width="68" height="88" rx="4" fill="rgba(45,212,191,.16)" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="340"></rect>
+              <text class="guia__lbl guia__room-label" x="122" y="86" text-anchor="middle">Cocina</text>
+              <text class="guia__lbl guia__room-label" x="198" y="86" text-anchor="middle">Dormitorio</text>
+            </g>
+
+            <g class="guia__scene guia__scene--4">
+              <g class="guia__box">
+                <path d="M58 104l28-15 28 15-28 15z" fill="#3b82f6"></path>
+                <path d="M58 104v16l28 15v-16z" fill="#1d4ed8"></path>
+                <path d="M114 104v16l-28 15v-16z" fill="#1e40af"></path>
+              </g>
+              <g class="guia__box guia__box--2">
+                <path d="M118 118l24-13 24 13-24 13z" fill="#2dd4bf"></path>
+                <path d="M118 118v14l24 13v-14z" fill="#0f766e"></path>
+                <path d="M166 118v14l-24 13v-14z" fill="#115e59"></path>
+              </g>
+              <g class="guia__box guia__box--3">
+                <path d="M172 96l20-11 20 11-20 11z" fill="#a78bfa"></path>
+                <path d="M172 96v12l20 11v-12z" fill="#6d28d9"></path>
+                <path d="M212 96v12l-20 11v-12z" fill="#5b21b6"></path>
+              </g>
+              <g class="guia__check">
+                <circle cx="248" cy="140" r="11" fill="none" stroke="#2dd4bf" stroke-width="2"></circle>
+                <path d="M243 140l3.5 3.5 7-8" fill="none" stroke="#2dd4bf" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+              </g>
+              <text class="guia__lbl" x="248" y="162" text-anchor="middle">listo</text>
+            </g>
+          </svg>
+        </div>
+        <p class="guia__caption" id="guia-caption">Arrastrá tu plano (o tocá “Subí tu plano”).</p>
+        <p class="guia__hint">Demo de 8 s. Después soltá tu archivo sobre el plano o usá los botones: el input es la vía accesible con teclado.</p>
+      </aside>
 
       <div class="builder-step">
         <h2 class="builder-step__title"><span class="builder-step__num" aria-hidden="true">1</span>Partí de una base</h2>
@@ -586,7 +889,7 @@
           <label class="btn btn--ghost" for="dxf-file">Tengo el CAD (DXF)</label>
           <input class="plan-upload__input" id="dxf-file" type="file" accept=".dxf,application/dxf">
           <div class="plan-upload__meta">
-            <p class="plan-upload__hint">Imagen o PDF (primera página) se procesan en tu navegador; el DXF lo interpreta el server para detectar ambientes. Nada se guarda.</p>
+            <p class="plan-upload__hint">Arrastrá tu plano al editor o al área de carga — o usá los botones, que son la vía accesible con teclado. Imagen o PDF (primera página) se procesan en tu navegador; el DXF lo interpreta el server para detectar ambientes. Nada se guarda.</p>
             <p class="plan-upload__status" id="plan-status" role="status" aria-live="polite"></p>
             <p class="plan-upload__status" id="dxf-fallback" hidden>
               <a href="#plan-upload">Probá con una imagen del plano</a>
