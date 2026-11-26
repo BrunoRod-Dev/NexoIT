@@ -131,6 +131,16 @@
   var planRemoveEl = document.getElementById('plan-remove');
   var dxfFileEl = document.getElementById('dxf-file');
   var dxfFallbackEl = document.getElementById('dxf-fallback');
+  var budgetOpenEl = document.getElementById('budget-open');
+  var budgetFormEl = document.getElementById('budget-form');
+  var budgetStatusEl = document.getElementById('budget-status');
+  var budgetNombreEl = document.getElementById('budget-nombre');
+  var budgetEmailEl = document.getElementById('budget-email');
+  var budgetMensajeEl = document.getElementById('budget-mensaje');
+  var saveOpenEl = document.getElementById('save-open');
+  var saveFormEl = document.getElementById('save-form');
+  var saveNombreEl = document.getElementById('save-nombre');
+  var saveStatusEl = document.getElementById('save-status');
   var templateButtons = [].slice.call(document.querySelectorAll('.template-btn'));
   var paletteButtons = [].slice.call(document.querySelectorAll('.palette__btn'));
 
@@ -615,6 +625,325 @@
         );
         if (dxfFallbackEl) dxfFallbackEl.hidden = false;
       });
+  }
+
+  // --- F3: sesión, diseños guardados y presupuesto ---------------------------
+
+  var sessionState = { checked: false, authenticated: false, csrf: null };
+  var currentDesignId = null;
+
+  function loadSession() {
+    if (sessionState.checked) return Promise.resolve(sessionState);
+    return fetch('/app/session')
+      .then(function (response) {
+        return response.json().catch(function () { return null; });
+      })
+      .then(function (data) {
+        if (data && data.ok) {
+          sessionState.checked = true;
+          sessionState.authenticated = !!data.authenticated;
+          sessionState.csrf = data.csrf_token || null;
+        }
+        return sessionState;
+      })
+      .catch(function () {
+        return sessionState;
+      });
+  }
+
+  function setFormStatus(el, text, kind) {
+    if (!el) return;
+    el.className = 'config-status' + (kind ? ' is-' + kind : '');
+    el.textContent = text;
+  }
+
+  function toggleForm(form, show) {
+    if (form) form.hidden = !show;
+  }
+
+  function configSnapshot() {
+    var snapshot = window.nexoConfigurador.getState();
+    var dispositivos = [];
+    state.ambientes.forEach(function (room) {
+      (state.aceptadas[room.id] || []).forEach(function (key) {
+        var device = findDevice(room.tipo, key);
+        if (!device) return;
+        dispositivos.push({
+          categoria: device.cat,
+          nombre: device.nombre,
+          ambiente: room.nombre
+        });
+      });
+    });
+    snapshot.dispositivos = dispositivos;
+
+    if (snapshot.plano && snapshot.plano.dataUrl && snapshot.plano.dataUrl.length > 400000) {
+      snapshot.plano = {
+        nombre: snapshot.plano.nombre,
+        dataUrl: null,
+        w: snapshot.plano.w,
+        h: snapshot.plano.h,
+        omitidoPorTamano: true
+      };
+    }
+    return snapshot;
+  }
+
+  function applyDesign(diseno) {
+    var data = diseno && diseno.data;
+    if (!data || !Array.isArray(data.ambientes) || !data.ambientes.length) {
+      if (hintEl) {
+        hintEl.hidden = false;
+        hintEl.textContent = 'El diseño guardado no tiene ambientes.';
+      }
+      return;
+    }
+
+    var imported = [];
+    var seen = {};
+    data.ambientes.slice(0, 60).forEach(function (raw) {
+      if (!raw || typeof raw !== 'object') return;
+      var tipo = TIPOS[raw.tipo] ? raw.tipo : 'living';
+      var id =
+        typeof raw.id === 'string' && /^r\d+$/.test(raw.id) && !seen[raw.id]
+          ? raw.id
+          : newId();
+      seen[id] = true;
+      imported.push({
+        id: id,
+        tipo: tipo,
+        nombre: String(raw.nombre || TIPOS[tipo].label).slice(0, 40),
+        x: clamp(Number(raw.x) || 0, 0, AREA.w - 0.5),
+        y: clamp(Number(raw.y) || 0, 0, AREA.d - 0.5),
+        w: clamp(Number(raw.w) || TIPOS[tipo].w, 0.5, AREA.w),
+        h: clamp(Number(raw.h) || TIPOS[tipo].h, 0.5, AREA.d)
+      });
+    });
+
+    var maxId = 0;
+    imported.forEach(function (room) {
+      var n = parseInt(String(room.id).slice(1), 10);
+      if (!isNaN(n) && n > maxId) maxId = n;
+    });
+    if (maxId >= uidCounter) uidCounter = maxId + 1;
+
+    state.ambientes = imported;
+    state.aceptadas = {};
+    imported.forEach(function (room) {
+      var saved = data.aceptadas && data.aceptadas[room.id];
+      var valid = deviceIndex(room.tipo).map(function (d) { return d.key; });
+      state.aceptadas[room.id] = Array.isArray(saved)
+        ? saved.filter(function (key) { return valid.indexOf(key) !== -1; })
+        : defaultsFor(room.tipo);
+    });
+    state.selectedId = imported[0].id;
+    state.template = data.template || null;
+
+    state.plano = null;
+    var planoOmitido = false;
+    if (
+      data.plano &&
+      typeof data.plano.dataUrl === 'string' &&
+      /^data:image\//.test(data.plano.dataUrl)
+    ) {
+      state.plano = {
+        nombre: String(data.plano.nombre || 'plano'),
+        dataUrl: data.plano.dataUrl,
+        w: Number(data.plano.w) || 0,
+        h: Number(data.plano.h) || 0
+      };
+    } else if (data.plano && data.plano.omitidoPorTamano) {
+      planoOmitido = true;
+    }
+
+    currentDesignId = diseno.id;
+    syncTemplates();
+    renderPlanoUI();
+    renderPlan();
+    renderProps();
+    renderSuggestions();
+    renderTotals();
+    schedule3D();
+    saveDraft();
+
+    var mensaje = 'Diseño cargado: ' + (diseno.nombre || 'sin nombre') + '.';
+    if (planoOmitido) mensaje += ' El plano no estaba guardado por tamaño.';
+    if (hintEl) {
+      hintEl.hidden = false;
+      hintEl.textContent = mensaje;
+    }
+    setPlanStatus(mensaje, 'ok');
+  }
+
+  function loadDiseno(id) {
+    fetch('/app/disenos/' + encodeURIComponent(id))
+      .then(function (response) {
+        return response
+          .json()
+          .catch(function () { return null; })
+          .then(function (data) { return { response: response, data: data }; });
+      })
+      .then(function (result) {
+        if (result.data && result.data.ok === true && result.data.diseno) {
+          applyDesign(result.data.diseno);
+          if (saveNombreEl) saveNombreEl.value = result.data.diseno.nombre || '';
+          return;
+        }
+        if (hintEl) {
+          hintEl.hidden = false;
+          hintEl.textContent =
+            'No pudimos cargar el diseño. Iniciá sesión con la cuenta dueña.';
+        }
+      })
+      .catch(function () {
+        if (hintEl) {
+          hintEl.hidden = false;
+          hintEl.textContent = 'No pudimos cargar el diseño.';
+        }
+      });
+  }
+
+  function openSaveForm() {
+    loadSession().then(function (session) {
+      if (!session.authenticated) {
+        var next = window.location.pathname + window.location.search;
+        window.location.href = '/app/login?next=' + encodeURIComponent(next);
+        return;
+      }
+      if (saveNombreEl && !saveNombreEl.value) {
+        saveNombreEl.value = currentDesignId ? saveNombreEl.value : 'Mi casa';
+      }
+      toggleForm(saveFormEl, true);
+      setFormStatus(saveStatusEl, '', '');
+    });
+  }
+
+  function initF3() {
+    if (budgetOpenEl) {
+      budgetOpenEl.addEventListener('click', function () {
+        toggleForm(budgetFormEl, true);
+        setFormStatus(budgetStatusEl, '', '');
+      });
+    }
+
+    document.querySelectorAll('[data-close]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var which = btn.getAttribute('data-close');
+        if (which === 'budget') toggleForm(budgetFormEl, false);
+        if (which === 'save') toggleForm(saveFormEl, false);
+      });
+    });
+
+    if (saveOpenEl) {
+      saveOpenEl.addEventListener('click', openSaveForm);
+    }
+
+    if (saveFormEl) {
+      saveFormEl.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var nombre = (saveNombreEl.value || '').trim();
+        if (nombre.length < 2 || nombre.length > 120) {
+          setFormStatus(saveStatusEl, 'El nombre debe tener entre 2 y 120 caracteres.', 'error');
+          return;
+        }
+        var submit = saveFormEl.querySelector('[type="submit"]');
+        if (submit) submit.disabled = true;
+
+        var payload = { nombre: nombre, data: configSnapshot() };
+        if (currentDesignId) payload.diseno_id = currentDesignId;
+
+        fetch('/app/guardar-diseno', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': sessionState.csrf || ''
+          },
+          body: JSON.stringify(payload)
+        })
+          .then(function (response) {
+            return response
+              .json()
+              .catch(function () { return null; })
+              .then(function (data) { return { response: response, data: data }; });
+          })
+          .then(function (result) {
+            if (submit) submit.disabled = false;
+            if (result.data && result.data.ok === true) {
+              currentDesignId = result.data.id;
+              setFormStatus(saveStatusEl, 'Diseño guardado: ' + result.data.nombre + '.', 'ok');
+              toggleForm(saveFormEl, false);
+              return;
+            }
+            var msg =
+              (result.data && result.data.error) ||
+              'No pudimos guardar el diseño. Probá de nuevo.';
+            setFormStatus(saveStatusEl, msg, 'error');
+          })
+          .catch(function () {
+            if (submit) submit.disabled = false;
+            setFormStatus(saveStatusEl, 'No pudimos guardar el diseño. Probá de nuevo.', 'error');
+          });
+      });
+    }
+
+    if (budgetFormEl) {
+      budgetFormEl.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var nombre = (budgetNombreEl.value || '').trim();
+        var email = (budgetEmailEl.value || '').trim();
+        var mensaje =
+          (budgetMensajeEl.value || '').trim() ||
+          'Quiero un presupuesto para esta casa.';
+        if (!nombre || !email) {
+          setFormStatus(budgetStatusEl, 'Completá nombre y email.', 'error');
+          return;
+        }
+        var submit = budgetFormEl.querySelector('[type="submit"]');
+        if (submit) submit.disabled = true;
+
+        fetch('/consultas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: nombre,
+            email: email,
+            mensaje: mensaje,
+            config: configSnapshot()
+          })
+        })
+          .then(function (response) {
+            return response
+              .json()
+              .catch(function () { return null; })
+              .then(function (data) { return { response: response, data: data }; });
+          })
+          .then(function (result) {
+            if (submit) submit.disabled = false;
+            if (result.response.status === 201) {
+              setFormStatus(
+                budgetStatusEl,
+                'Consulta enviada. Te respondemos a la brevedad.',
+                'ok'
+              );
+              budgetFormEl.reset();
+              toggleForm(budgetFormEl, false);
+              return;
+            }
+            var msg =
+              (result.data && result.data.error) ||
+              'No pudimos enviar la consulta. Probá de nuevo.';
+            setFormStatus(budgetStatusEl, msg, 'error');
+          })
+          .catch(function () {
+            if (submit) submit.disabled = false;
+            setFormStatus(
+              budgetStatusEl,
+              'No pudimos enviar la consulta. Probá de nuevo.',
+              'error'
+            );
+          });
+      });
+    }
   }
 
   // --- Render 2D -------------------------------------------------------------
@@ -1460,6 +1789,7 @@
   renderSuggestions();
   renderTotals();
   renderPlanoUI();
+  initF3();
   init();
 
   if (restoredOmitted && hintEl) {
@@ -1471,6 +1801,10 @@
       ? 'Recuperamos tu última casa y tu plano.'
       : 'Recuperamos tu última casa.';
   }
+
+  var params = new URLSearchParams(window.location.search);
+  var disenoParam = params.get('diseno');
+  if (disenoParam) loadDiseno(disenoParam);
 
   function ensureAceptadasAll() {
     state.ambientes.forEach(function (room) {

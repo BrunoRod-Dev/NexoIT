@@ -50,4 +50,32 @@
   </p>
   {% endif %}
 </section>
+
+<section class="section" aria-labelledby="disenos-title">
+  <div class="section__head">
+    <p class="badge">Diseños</p>
+    <h2 class="section__title" id="disenos-title">Tus diseños</h2>
+    <p class="section__lead">Casas guardadas desde el configurador. Podés abrirlas y seguir editándolas.</p>
+  </div>
+
+  {% if disenos %}
+  <div class="cards">
+    {% for d in disenos %}
+    <article class="card">
+      <h3 class="card__title">{{ d.nombre }}</h3>
+      <p class="card__meta">{{ d.ambientes_count }} ambientes{% if d.updated_at %} · {{ d.updated_at.strftime('%d/%m/%Y') }}{% endif %}</p>
+      <a class="btn btn--ghost btn--small" href="/home/configurador/index.html?diseno={{ d.id }}">Abrir en el configurador</a>
+      <form method="post" action="/app/disenos/{{ d.id }}/borrar">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn--ghost btn--small" type="submit">Borrar</button>
+      </form>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <p class="card__text">Todavía no guardaste diseños — armá tu casa en el <a href="/home/configurador/index.html">configurador</a>.</p>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}

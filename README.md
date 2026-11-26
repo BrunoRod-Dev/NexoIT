@@ -93,8 +93,17 @@ Themes: `body.theme--grow { --accent: #4ade80 }`, `body.theme--home { --accent: 
 - **Crear admin:** `server\crear-admin.bat` (o `python create_admin.py <email> <password> [nombre]`).
 - **Endpoints:** `POST /consultas` (público, JSON `{nombre, email, mensaje}`, **201** `{"ok":true}` / **400** `{"ok":false,"error":…}`, rate limit **10/min** por IP, chequeo same-origin cuando hay `Origin`/`Referer`); `/app/login`, `/app/registro`, `/app/perfil`, `/app/admin` (con marca de consulta leída) y `/app/logout`. Rate limits: registro **5/h**, login **10/10 min** (en memoria por IP).
 - **Seguridad:** passwords con **bcrypt** (passlib); cookie de sesión firmada `nexoit_session` (8 h, `httpOnly`, `samesite=lax`); **CSRF** con token por sesión verificado en cada POST; **same-origin** en `/consultas`; headers `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`; API docs deshabilitados; mounts estáticos limitados a `assets/` y `static/`.
-- **Tests:** **21 tests** con pytest — `test_auth` (8), `test_consultas` (6), `test_static` (7). Correrlos desde la raíz: `server\.venv\Scripts\python -m pytest server/tests -q` (deps en `requirements-dev.txt`: pytest 9.2.0 + httpx2).
+- **Tests:** **suite completa en `server/tests/`** (pytest) — correrlos desde la raíz: `server\.venv\Scripts\python -m pytest server/tests -q` (deps en `requirements-dev.txt`: pytest 9.2.0 + httpx2).
 - **CI:** `.github/workflows/ci.yml` — pytest + `node --check` de `assets/js/main.js` y `assets/js/configurador.js` en push/PR a `main`.
+
+### Diseños y presupuestos
+
+Flujo completo: en el **configurador** armás tu casa → **guardás el diseño con cuenta** → **solicítás presupuesto** con esa selección → la **consulta llega al admin con la configuración adjunta** (resumen estructurado por consulta).
+
+- Endpoints nuevos: `POST /app/guardar-diseno`, `GET /app/mis-disenos` y `GET /app/disenos/{id}` — con la misma barra del área `/app`: autenticación, CSRF en los POST y rate-limits.
+- **Regla del dataUrl:** la imagen del diseño es pesada; si supera el tope, **no se guarda dentro del diseño** (se conserva el resto de la configuración).
+- **`consultas.config_json`:** mini-migración al arrancar — una DB vieja abre sin pasos manuales.
+- En el perfil aparece la sección **"Tus diseños"** y el configurador carga un diseño con `?diseno={id}`.
 
 ## SEO
 
@@ -118,7 +127,9 @@ El configurador evolucionó de "casas modelo" a **room builder**: 3 templates de
 
 - **F2b:** subir tu plano como base del editor — **hecho**.
 - **F2c:** importación DXF del arquitecto — **hecho**.
-- **F3:** guardar diseño con cuenta + consulta estructurada en el admin.
+- **F3:** guardar diseño con cuenta + consulta estructurada en el admin — **hecho**.
+
+**Próximo: difusión** (datos de contacto reales, Pages, dominio).
 
 ## Pendientes (TODOs)
 

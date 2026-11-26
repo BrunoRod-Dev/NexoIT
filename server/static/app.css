@@ -132,6 +132,29 @@
   color: var(--color-muted);
 }
 
+/* Resumen de configuración en el admin */
+.config-resumen {
+  margin-block: var(--space-2);
+}
+
+.config-resumen summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.config-resumen__list {
+  margin: var(--space-1) 0 var(--space-3);
+  padding-inline-start: 1.1rem;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.config-resumen__list li {
+  margin-block-end: 2px;
+}
+
 .app-dl {
   display: grid;
   grid-template-columns: minmax(6rem, auto) 1fr;

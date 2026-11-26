@@ -48,6 +48,33 @@
       <p class="card__text">{{ c.email }}</p>
       <p class="card__meta">{% if cuenta %}Cuenta: {{ cuenta.email }}{% else %}Sin cuenta{% endif %}</p>
       <p class="card__text">{{ c.mensaje }}</p>
+
+      {% if c.config_json %}
+      <p class="card__meta"><span class="badge">Con configuración</span></p>
+      <details class="config-resumen">
+        <summary>Ver configuración</summary>
+        {% set res = resumenes.get(c.id) %}
+        {% if res %}
+        <p class="card__meta">{{ res.ambientes|length }} ambientes · {{ res.total }} dispositivos</p>
+        {% if res.ambientes %}
+        <ul class="config-resumen__list">
+          {% for a in res.ambientes %}
+          <li>{{ a.nombre }} · {{ a.tipo }} · {{ a.w }}×{{ a.h }} m</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% for cat in res.categorias %}
+        <p class="card__meta">{{ cat['label'] }} ({{ cat['items']|length }})</p>
+        <ul class="config-resumen__list">
+          {% for item in cat['items'] %}<li>{{ item }}</li>{% endfor %}
+        </ul>
+        {% endfor %}
+        {% else %}
+        <p class="card__text">No pudimos leer la configuración.</p>
+        {% endif %}
+      </details>
+      {% endif %}
+
       {% if c.estado != 'leida' %}
       <form method="post" action="/app/admin/consultas/{{ c.id }}/leida">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

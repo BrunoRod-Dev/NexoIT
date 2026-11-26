@@ -490,6 +490,41 @@
       font-size: 0.8125rem;
     }
 
+    .config-form {
+      display: grid;
+      gap: var(--space-2);
+      inline-size: 100%;
+      max-inline-size: 30rem;
+      margin-block-start: var(--space-2);
+    }
+
+    .config-form[hidden] {
+      display: none;
+    }
+
+    .config-form .field {
+      margin-block-end: 0;
+    }
+
+    .config-note {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+    }
+
+    .config-status {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+
+    .config-status.is-ok {
+      color: var(--accent-grow);
+    }
+
+    .config-status.is-error {
+      color: #f87171;
+    }
+
     body.is-dragging {
       cursor: grabbing;
     }
@@ -605,8 +640,44 @@
         <p class="totals" id="totals" aria-live="polite"></p>
 
         <div class="config-cta">
-          <a class="btn btn--accent" href="../../index.html#contacto">Solicitar presupuesto con esta selección</a>
-          <p class="config-teaser">Próximamente: guardá tu diseño con tu cuenta.</p>
+          <button class="btn btn--accent" type="button" id="budget-open">Solicitar presupuesto con esta selección</button>
+          <form class="config-form" id="budget-form" hidden>
+            <div class="field">
+              <label class="field__label" for="budget-nombre">Nombre</label>
+              <input class="field__input" id="budget-nombre" name="nombre" type="text" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <label class="field__label" for="budget-email">Email</label>
+              <input class="field__input" id="budget-email" name="email" type="email" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <label class="field__label" for="budget-mensaje">Contanos algo más de tu casa (opcional)</label>
+              <textarea class="field__input" id="budget-mensaje" name="mensaje" rows="3"></textarea>
+            </div>
+            <p class="config-note">Se adjunta tu configuración a la consulta.</p>
+            <div class="form-actions">
+              <button class="btn btn--accent" type="submit">Enviar consulta</button>
+              <button class="btn btn--ghost" type="button" data-close="budget">Cancelar</button>
+            </div>
+            <p class="config-status" id="budget-status" role="status" aria-live="polite"></p>
+            <noscript>
+              <p class="config-hint">Este formulario necesita JavaScript. Podés usar el <a href="../../index.html#contacto">formulario del sitio</a>.</p>
+            </noscript>
+          </form>
+
+          <button class="btn btn--ghost" type="button" id="save-open">Guardá tu diseño</button>
+          <form class="config-form" id="save-form" hidden>
+            <div class="field">
+              <label class="field__label" for="save-nombre">Nombre del diseño</label>
+              <input class="field__input" id="save-nombre" name="nombre" type="text" maxlength="120" required>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn--accent" type="submit">Guardar diseño</button>
+              <button class="btn btn--ghost" type="button" data-close="save">Cancelar</button>
+            </div>
+            <p class="config-status" id="save-status" role="status" aria-live="polite"></p>
+          </form>
+
           <button class="btn btn--ghost" type="button" id="reset-draft">Empezar de nuevo</button>
         </div>
       </div>

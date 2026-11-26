@@ -10,6 +10,7 @@ estático porque no contiene código.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -31,7 +32,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 import auth
-from models import Consulta, User, get_db, init_db
+from models import Consulta, Diseno, User, get_db, init_db
 
 try:
     import ezdxf
@@ -73,6 +74,7 @@ RATE_LIMITS = {
     "registro": {"limit": 5, "window": 3600},  # 5 por hora
     "login": {"limit": 10, "window": 600},  # 10 cada 10 minutos
     "dxf": {"limit": 5, "window": 60},  # 5 planos CAD por minuto
+    "disenos": {"limit": 30, "window": 3600},  # 30 guardados/borrados por hora
 }
 
 RATE_LIMIT_MESSAGES = {
@@ -80,6 +82,19 @@ RATE_LIMIT_MESSAGES = {
     "registro": "Demasiados registros desde esta conexión. Esperá un rato y probá de nuevo.",
     "login": "Demasiados intentos. Esperá unos minutos y probá de nuevo.",
     "dxf": "Demasiados planos CAD en poco tiempo. Esperá un momento.",
+    "disenos": "Demasiadas operaciones con diseños. Esperá un momento.",
+}
+
+MAX_DISENO_BYTES = 3 * 1024 * 1024
+MAX_CONFIG_BYTES = 200 * 1024
+MAX_DISENO_REQUEST_BYTES = MAX_DISENO_BYTES + 1024 * 1024  # slack JSON
+MAX_CONSULTA_REQUEST_BYTES = MAX_CONFIG_BYTES + 1024 * 1024  # slack JSON
+
+CATEGORIAS = {
+    "iluminacion": "Iluminación",
+    "clima": "Climatización",
+    "seguridad": "Seguridad",
+    "energia": "Energía",
 }
 
 # --- DXF (F2c) -------------------------------------------------------------
@@ -386,8 +401,13 @@ def render(request: Request, name: str, status_code: int = 200, **context):
 
 
 def safe_next(next_url: str | None) -> str:
-    """Evita open redirect: sólo rutas internas de la app."""
-    if next_url and next_url.startswith("/app/") and not next_url.startswith("//"):
+    """Evita open redirect: sólo rutas internas (mismo origen)."""
+    if (
+        next_url
+        and next_url.startswith("/")
+        and not next_url.startswith("//")
+        and not next_url.startswith("/\\")
+    ):
         return next_url
     return "/app/perfil"
 
@@ -400,6 +420,78 @@ def same_origin(request: Request) -> bool:
     netloc = urlparse(origin).netloc
     host = request.headers.get("host", "")
     return bool(netloc) and netloc.lower() == host.lower()
+
+
+def header_exceeds(request: Request, limit: int) -> bool:
+    """Pre-check barato: Content-Length declarado por encima del cap + slack."""
+    length_header = request.headers.get("content-length")
+    if not length_header:
+        return False
+    try:
+        return int(length_header) > limit
+    except ValueError:
+        return False
+
+
+def diseno_ambientes_count(raw: str) -> int:
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return 0
+    if not isinstance(data, dict):
+        return 0
+    ambientes = data.get("ambientes")
+    return len(ambientes) if isinstance(ambientes, list) else 0
+
+
+def resumen_config(raw: str):
+    """Resumen apto para el admin: ambientes + dispositivos por categoría."""
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+
+    ambientes = data.get("ambientes")
+    ambientes = ambientes if isinstance(ambientes, list) else []
+    ambientes_out = []
+    for room in ambientes[:40]:
+        if not isinstance(room, dict):
+            continue
+        ambientes_out.append(
+            {
+                "nombre": str(room.get("nombre") or "Ambiente")[:40],
+                "tipo": str(room.get("tipo") or "—")[:20],
+                "w": room.get("w"),
+                "h": room.get("h"),
+            }
+        )
+
+    dispositivos = data.get("dispositivos")
+    dispositivos = dispositivos if isinstance(dispositivos, list) else []
+    agrupados = {key: [] for key in CATEGORIAS}
+    for device in dispositivos[:200]:
+        if not isinstance(device, dict):
+            continue
+        cat = device.get("categoria")
+        if cat not in agrupados:
+            continue
+        nombre = str(device.get("nombre") or "")[:60]
+        ambiente = str(device.get("ambiente") or "")[:40]
+        texto = nombre + (f" · {ambiente}" if ambiente else "")
+        agrupados[cat].append(texto)
+
+    categorias = [
+        {"label": CATEGORIAS[key], "items": items}
+        for key, items in agrupados.items()
+        if items
+    ]
+    return {
+        "ambientes": ambientes_out,
+        "categorias": categorias,
+        "total": sum(len(items) for items in agrupados.values()),
+    }
 
 
 # --- Sitio estático (whitelist) --------------------------------------------
@@ -461,6 +553,11 @@ async def create_consulta(request: Request, db: Session = Depends(get_db)):
             {"ok": False, "error": "Origen no permitido."}, status_code=403
         )
 
+    if header_exceeds(request, MAX_CONSULTA_REQUEST_BYTES):
+        return JSONResponse(
+            {"ok": False, "error": "La consulta es demasiado grande."}, status_code=400
+        )
+
     try:
         data = await request.json()
     except Exception:
@@ -488,6 +585,27 @@ async def create_consulta(request: Request, db: Session = Depends(get_db)):
             status_code=400,
         )
 
+    config_json = None
+    config = data.get("config")
+    if config is not None:
+        if not isinstance(config, dict):
+            return JSONResponse(
+                {"ok": False, "error": "La configuración no es válida."},
+                status_code=400,
+            )
+        try:
+            config_json = json.dumps(config, ensure_ascii=False)
+        except (TypeError, ValueError):
+            return JSONResponse(
+                {"ok": False, "error": "La configuración no es válida."},
+                status_code=400,
+            )
+        if len(config_json.encode("utf-8")) > MAX_CONFIG_BYTES:
+            return JSONResponse(
+                {"ok": False, "error": "La configuración supera los 200 KB."},
+                status_code=400,
+            )
+
     user = auth.current_user(request, db)
     db.add(
         Consulta(
@@ -495,6 +613,7 @@ async def create_consulta(request: Request, db: Session = Depends(get_db)):
             email=email,
             mensaje=mensaje,
             estado="nueva",
+            config_json=config_json,
             user_id=user.id if user is not None else None,
         )
     )
@@ -563,6 +682,17 @@ async def dxf_parse(request: Request, file: UploadFile = File(...)):
 @app.get("/app", include_in_schema=False)
 def app_root() -> RedirectResponse:
     return RedirectResponse("/app/perfil", status_code=302)
+
+
+@app.get("/app/session")
+def app_session(request: Request, db: Session = Depends(get_db)):
+    """Estado de sesión + CSRF para el configurador (fetch same-origin)."""
+    user = auth.current_user(request, db)
+    payload = {"ok": True, "authenticated": user is not None}
+    if user is not None:
+        payload["csrf_token"] = auth.ensure_csrf(request)
+        payload["nombre"] = user.nombre
+    return JSONResponse(payload)
 
 
 @app.get("/app/login", response_class=HTMLResponse)
@@ -692,7 +822,178 @@ def profile(
         .where(Consulta.user_id == user.id)
         .order_by(Consulta.created_at.desc(), Consulta.id.desc())
     ).all()
-    return render(request, "perfil.html", user=user, consultas=consultas)
+    disenos = db.scalars(
+        select(Diseno)
+        .where(Diseno.user_id == user.id)
+        .order_by(Diseno.updated_at.desc(), Diseno.id.desc())
+    ).all()
+    disenos_info = [
+        {
+            "id": d.id,
+            "nombre": d.nombre,
+            "updated_at": d.updated_at,
+            "ambientes_count": diseno_ambientes_count(d.data),
+        }
+        for d in disenos
+    ]
+    return render(
+        request,
+        "perfil.html",
+        user=user,
+        consultas=consultas,
+        disenos=disenos_info,
+    )
+
+
+@app.post("/app/guardar-diseno")
+async def guardar_diseno(
+    request: Request,
+    user: User = Depends(auth.require_auth),
+    db: Session = Depends(get_db),
+):
+    if rate_limited(request, "disenos"):
+        return JSONResponse(
+            {"ok": False, "error": RATE_LIMIT_MESSAGES["disenos"]}, status_code=429
+        )
+    if not auth.verify_csrf(request, request.headers.get("x-csrf-token", "")):
+        return JSONResponse(
+            {"ok": False, "error": "La sesión expiró. Recargá la página."},
+            status_code=400,
+        )
+
+    if header_exceeds(request, MAX_DISENO_REQUEST_BYTES):
+        return JSONResponse(
+            {"ok": False, "error": "El diseño es demasiado grande."}, status_code=400
+        )
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse(
+            {"ok": False, "error": "Datos inválidos."}, status_code=400
+        )
+    if not isinstance(payload, dict):
+        return JSONResponse(
+            {"ok": False, "error": "Datos inválidos."}, status_code=400
+        )
+
+    nombre = str(payload.get("nombre") or "").strip()
+    data = payload.get("data")
+    if len(nombre) < 2 or len(nombre) > 120:
+        return JSONResponse(
+            {"ok": False, "error": "El nombre debe tener entre 2 y 120 caracteres."},
+            status_code=400,
+        )
+    if not isinstance(data, dict):
+        return JSONResponse(
+            {"ok": False, "error": "El diseño no es válido."}, status_code=400
+        )
+    try:
+        serialized = json.dumps(data, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return JSONResponse(
+            {"ok": False, "error": "El diseño no es válido."}, status_code=400
+        )
+    if len(serialized.encode("utf-8")) > MAX_DISENO_BYTES:
+        return JSONResponse(
+            {"ok": False, "error": "El diseño supera los 3 MB. Quitá el plano pesado."},
+            status_code=400,
+        )
+
+    diseno_id = payload.get("diseno_id")
+    diseno = None
+    if diseno_id not in (None, "", 0):
+        try:
+            diseno_id = int(diseno_id)
+        except (TypeError, ValueError):
+            return JSONResponse(
+                {"ok": False, "error": "Diseño no encontrado."}, status_code=404
+            )
+        diseno = db.get(Diseno, diseno_id)
+        if diseno is None or diseno.user_id != user.id:
+            return JSONResponse(
+                {"ok": False, "error": "Diseño no encontrado."}, status_code=404
+            )
+        diseno.nombre = nombre
+        diseno.data = serialized
+    else:
+        diseno = Diseno(user_id=user.id, nombre=nombre, data=serialized)
+        db.add(diseno)
+
+    db.commit()
+    db.refresh(diseno)
+    return JSONResponse({"ok": True, "id": diseno.id, "nombre": diseno.nombre})
+
+
+@app.get("/app/mis-disenos")
+def mis_disenos(
+    user: User = Depends(auth.require_auth),
+    db: Session = Depends(get_db),
+):
+    rows = db.scalars(
+        select(Diseno)
+        .where(Diseno.user_id == user.id)
+        .order_by(Diseno.updated_at.desc(), Diseno.id.desc())
+    ).all()
+    return JSONResponse(
+        {
+            "ok": True,
+            "disenos": [
+                {
+                    "id": d.id,
+                    "nombre": d.nombre,
+                    "ambientes_count": diseno_ambientes_count(d.data),
+                    "updated_at": d.updated_at.isoformat() if d.updated_at else None,
+                }
+                for d in rows
+            ],
+        }
+    )
+
+
+@app.get("/app/disenos/{diseno_id}")
+def obtener_diseno(
+    diseno_id: int,
+    user: User = Depends(auth.require_auth),
+    db: Session = Depends(get_db),
+):
+    diseno = db.get(Diseno, diseno_id)
+    if diseno is None or diseno.user_id != user.id:
+        return JSONResponse(
+            {"ok": False, "error": "Diseño no encontrado."}, status_code=404
+        )
+    try:
+        data = json.loads(diseno.data)
+    except Exception:
+        data = {}
+    return JSONResponse(
+        {
+            "ok": True,
+            "diseno": {"id": diseno.id, "nombre": diseno.nombre, "data": data},
+        }
+    )
+
+
+@app.post("/app/disenos/{diseno_id}/borrar")
+def borrar_diseno(
+    diseno_id: int,
+    request: Request,
+    csrf_token: str = Form(""),
+    user: User = Depends(auth.require_auth),
+    db: Session = Depends(get_db),
+):
+    if not auth.verify_csrf(request, csrf_token):
+        return HTMLResponse(
+            "<h1>400</h1><p>Token CSRF inválido.</p>", status_code=400
+        )
+    diseno = db.get(Diseno, diseno_id)
+    if diseno is None or diseno.user_id != user.id:
+        return HTMLResponse(
+            "<h1>404</h1><p>Diseño no encontrado.</p>", status_code=404
+        )
+    db.delete(diseno)
+    db.commit()
+    return RedirectResponse("/app/perfil", status_code=302)
 
 
 @app.get("/app/admin", response_class=HTMLResponse)
@@ -710,7 +1011,18 @@ def admin(
         .order_by(Consulta.created_at.desc(), Consulta.id.desc())
     ).all()
     consultas = [(consulta, cuenta) for consulta, cuenta in rows]
-    return render(request, "admin.html", user=user, users=users, consultas=consultas)
+    resumenes = {}
+    for consulta, _ in rows:
+        if consulta.config_json:
+            resumenes[consulta.id] = resumen_config(consulta.config_json)
+    return render(
+        request,
+        "admin.html",
+        user=user,
+        users=users,
+        consultas=consultas,
+        resumenes=resumenes,
+    )
 
 
 @app.post("/app/admin/consultas/{consulta_id}/leida")

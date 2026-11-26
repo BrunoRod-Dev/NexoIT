@@ -64,6 +64,19 @@ def test_consulta_con_sesion_adjunta_user_id(client, register):
         db.close()
 
 
+def test_consulta_content_length_gigante_400(client):
+    response = client.post(
+        "/consultas",
+        content=b"{}",
+        headers={
+            "Content-Type": "application/json",
+            "Content-Length": str(1024 * 1024 + 200 * 1024 + 1),
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["error"] == "La consulta es demasiado grande."
+
+
 def test_consulta_rate_limit_429(client):
     for _ in range(10):
         assert client.post("/consultas", json=payload()).status_code == 201

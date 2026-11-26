@@ -66,6 +66,7 @@ class Consulta(Base):
     email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
     mensaje: Mapped[str] = mapped_column(Text, nullable=False)
     estado: Mapped[str] = mapped_column(String(20), nullable=False, default="nueva")
+    config_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -74,9 +75,45 @@ class Consulta(Base):
         return f"<Consulta {self.id} {self.email} ({self.estado})>"
 
 
+class Diseno(Base):
+    """Casa guardada desde el configurador (JSON completo del estado)."""
+
+    __tablename__ = "disenos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    nombre: Mapped[str] = mapped_column(String(120), nullable=False)
+    data: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - ayuda de depuración
+        return f"<Diseno {self.id} user={self.user_id}>"
+
+
 def init_db() -> None:
-    """Crea las tablas si no existen (se llama al iniciar la app)."""
+    """Crea las tablas si no existen y aplica mini-migraciones (SQLite)."""
     Base.metadata.create_all(bind=engine)
+    migrate_schema(engine)
+
+
+def migrate_schema(bind) -> None:
+    """Agrega columnas nuevas a tablas existentes (create_all no altera)."""
+    with bind.connect() as conn:
+        rows = conn.exec_driver_sql("PRAGMA table_info(consultas)").fetchall()
+        columns = [row[1] for row in rows]
+        if columns and "config_json" not in columns:
+            conn.exec_driver_sql("ALTER TABLE consultas ADD COLUMN config_json TEXT")
+            conn.commit()
 
 
 def get_db():

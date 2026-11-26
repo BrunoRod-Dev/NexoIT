@@ -76,3 +76,10 @@ Historial por fases de NexoIT. Fuente de hashes/fechas: `git log --oneline`.
 - Detección por **polilíneas cerradas + etiquetas** (labels ES/EN) y **heurística de unidades** (mm/cm/m).
 - Botón **"Tengo el CAD (DXF)"** en el configurador, con fallback honesto a modo imagen cuando el DXF no trae polilíneas cerradas.
 - Revisás tipos/posiciones después de importar; las sugerencias por ambiente corren igual que en el resto del editor.
+
+## F3 — Guardar diseños y consulta estructurada
+
+- Nueva tabla **`disenos`**: guardar el diseño con cuenta, con tope para el dataUrl de la imagen (si lo supera, no se guarda dentro del diseño).
+- **Cargar y reanudar:** endpoints `POST /app/guardar-diseno`, `GET /app/mis-disenos` y `GET /app/disenos/{id}`, sección **"Tus diseños"** en el perfil y arranque del configurador con `?diseno={id}`.
+- **CTA del configurador → presupuesto:** la consulta sale con la configuración adjunta y el admin ve el **resumen estructurado por consulta**.
+- **Mini-migración de `consultas.config_json`:** arranque seguro con DBs viejas, sin pasos manuales.
