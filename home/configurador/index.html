@@ -138,6 +138,23 @@
       color: #f87171;
     }
 
+    .plan-upload__demo {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+    }
+
+    .plan-upload__demo-link {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .plan-upload__demo-link:hover,
+    .plan-upload__demo-link:focus-visible {
+      color: var(--accent-strong);
+    }
+
     .plan-actions {
       display: flex;
       flex-wrap: wrap;
@@ -894,6 +911,7 @@
             <p class="plan-upload__status" id="dxf-fallback" hidden>
               <a href="#plan-upload">Probá con una imagen del plano</a>
             </p>
+            <p class="plan-upload__demo">¿No tenés tu plano CAD a mano? <a class="plan-upload__demo-link" href="#plan-upload" id="dxf-demo">Probá con esta casa de demo</a></p>
           </div>
         </div>
 

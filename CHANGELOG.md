@@ -90,3 +90,9 @@ Historial por fases de NexoIT. Fuente de hashes/fechas: `git log --oneline`.
 - **Demo animada "Cómo cargo mi casa":** SVG+CSS, ~8 segundos, 4 escenas con captions.
 - Se muestra **una sola vez** en la primera visita (flag `nexo-guia-vista` en `localStorage`), con cierre por X o clic afuera.
 - Botón **"?"** en el header para reproducir la guía on-demand; no aparece si el usuario llega con `?diseno=`.
+
+## D1 — Casa demo DXF y link de prueba en el configurador
+
+- **Generador reproducible** `server/tools/generar_demo_dxf.py`: 9 ambientes sin solapes (living, cocina, 3 dormitorios, 2 baños, garage y patio) en una planta de 12 × 10 m, con `$INSUNITS=6` en la variante métrica.
+- **Casa de demo versionada** en `assets/demo/plano-demo-casa.dxf`, más una variante en centímetros sin `$INSUNITS` para probar la heurística de unidades.
+- **Link "Probá con esta casa de demo"** en el configurador: descarga el DXF y lo pasa por el mismo pipeline CAD, sin lógica ni rutas nuevas en el server.

@@ -131,6 +131,7 @@
   var planRemoveEl = document.getElementById('plan-remove');
   var dxfFileEl = document.getElementById('dxf-file');
   var dxfFallbackEl = document.getElementById('dxf-fallback');
+  var dxfDemoEl = document.getElementById('dxf-demo');
   var planUploadEl = document.getElementById('plan-upload');
   var guiaEl = document.getElementById('guia');
   var guiaDemoEl = document.getElementById('guia-demo');
@@ -630,6 +631,28 @@
           'error'
         );
         if (dxfFallbackEl) dxfFallbackEl.hidden = false;
+      });
+  }
+
+  // --- D1: casa de demo ------------------------------------------------------
+
+  function loadDemoCasa() {
+    setPlanStatus('Cargando la casa de demo…', '');
+    fetch('../../assets/demo/plano-demo-casa.dxf')
+      .then(function (response) {
+        if (!response.ok) throw new Error('demo');
+        return response.blob();
+      })
+      .then(function (blob) {
+        handleDxfFile(
+          new File([blob], 'plano-demo-casa.dxf', { type: 'application/dxf' })
+        );
+      })
+      .catch(function () {
+        setPlanStatus(
+          'No pudimos cargar la casa de demo. Probá subiendo tu DXF.',
+          'error'
+        );
       });
   }
 
@@ -1659,6 +1682,13 @@
       var file = dxfFileEl.files && dxfFileEl.files[0];
       dxfFileEl.value = '';
       if (file) handleDxfFile(file);
+    });
+  }
+
+  if (dxfDemoEl) {
+    dxfDemoEl.addEventListener('click', function (event) {
+      event.preventDefault();
+      loadDemoCasa();
     });
   }
 
