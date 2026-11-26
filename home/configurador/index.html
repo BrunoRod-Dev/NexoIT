@@ -544,13 +544,18 @@
           <button class="template-btn" type="button" data-template="cero" aria-pressed="false">Desde cero</button>
         </div>
 
-        <div class="plan-upload">
+        <div class="plan-upload" id="plan-upload">
           <label class="btn btn--ghost" for="plan-file">Subí tu plano</label>
           <input class="plan-upload__input" id="plan-file" type="file"
                  accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf">
+          <label class="btn btn--ghost" for="dxf-file">Tengo el CAD (DXF)</label>
+          <input class="plan-upload__input" id="dxf-file" type="file" accept=".dxf,application/dxf">
           <div class="plan-upload__meta">
-            <p class="plan-upload__hint">PNG, JPG o PDF (primera página). Se usa como guía en tu navegador: no se envía a ningún servidor.</p>
+            <p class="plan-upload__hint">Imagen o PDF (primera página) se procesan en tu navegador; el DXF lo interpreta el server para detectar ambientes. Nada se guarda.</p>
             <p class="plan-upload__status" id="plan-status" role="status" aria-live="polite"></p>
+            <p class="plan-upload__status" id="dxf-fallback" hidden>
+              <a href="#plan-upload">Probá con una imagen del plano</a>
+            </p>
           </div>
         </div>
 

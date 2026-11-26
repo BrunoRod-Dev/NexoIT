@@ -110,12 +110,14 @@ El configurador evolucionó de "casas modelo" a **room builder**: 3 templates de
 
 **Modo "Subí tu plano":** la imagen (PNG/JPG nativas; PDF de la primera página vía **pdf.js 3.11.174 vendoreado con carga diferida** — sólo se descarga al subir un PDF) entra como base atenuada del editor para dibujar encima, con proyección como textura en el preview 3D cuando aplica; el draft guarda la imagen downscaleada (~2.5 MB de límite práctico).
 
+**Modo CAD (DXF):** subís el `.dxf` del arquitecto y el server lo analiza vía `POST /dxf-parse` con **ezdxf** (dependencia del backend en `server/requirements.txt`, no del front): los ambientes se detectan automáticamente por polilíneas cerradas + etiquetas (ES/EN), con unidades auto-detectadas (mm/cm/m por heurística). Después revisás tipos y posiciones, y las sugerencias corren igual. Límite 5 MB; si el DXF no trae polilíneas cerradas, fallback honesto a modo imagen.
+
 **Clases page-scoped del builder** (definidas en el `<style>` de `home/configurador/index.html`, mismo patrón que `.flow*`; no integran el inventario del contrato): `.builder-step*`, `.template-*`, `.builder-grid/.builder-plan/.plan*`, `.room*` (+ colores por `data-tipo`), `.palette*`, `.props*`, `.suggest*`, `.totals`, `.config-cta/.config-teaser`, `.draft-hint`, `body.is-dragging`; con una MQ propia `min-width: 62rem`.
 
 ### Roadmap
 
 - **F2b:** subir tu plano como base del editor — **hecho**.
-- **F2c:** importación DXF automática (con `ezdxf`).
+- **F2c:** importación DXF del arquitecto — **hecho**.
 - **F3:** guardar diseño con cuenta + consulta estructurada en el admin.
 
 ## Pendientes (TODOs)

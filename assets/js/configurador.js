@@ -20,6 +20,8 @@
   var PDF_SCRIPT = '../../assets/vendor/pdf.min.js';
   var PDF_WORKER = '../../assets/vendor/pdf.worker.min.js';
   var pdfLibPromise = null;
+  var DXF_FALLBACK_TEXT =
+    'No pudimos leer los ambientes automáticamente. Probá subir una imagen del plano y dibujarlos encima.';
 
   var CATS = {
     iluminacion: { label: 'Iluminación', hex: '#2dd4bf', color: 0x2dd4bf },
@@ -127,6 +129,8 @@
   var planNameEl = document.getElementById('plan-name');
   var planFileEl = document.getElementById('plan-file');
   var planRemoveEl = document.getElementById('plan-remove');
+  var dxfFileEl = document.getElementById('dxf-file');
+  var dxfFallbackEl = document.getElementById('dxf-fallback');
   var templateButtons = [].slice.call(document.querySelectorAll('.template-btn'));
   var paletteButtons = [].slice.call(document.querySelectorAll('.palette__btn'));
 
@@ -481,6 +485,136 @@
     schedule3D();
     saveDraft();
     setPlanStatus('Plano quitado.', '');
+  }
+
+  // --- DXF del arquitecto (F2c) ----------------------------------------------
+
+  function applyDxf(payload) {
+    var list = Array.isArray(payload.ambientes) ? payload.ambientes : [];
+    var warnings = Array.isArray(payload.advertencias) ? payload.advertencias.slice() : [];
+    var imported = [];
+
+    list.forEach(function (raw) {
+      if (!raw || typeof raw !== 'object') return;
+      var tipo = TIPOS[raw.tipo] ? raw.tipo : 'living';
+      imported.push({
+        id: newId(),
+        tipo: tipo,
+        nombre: String(raw.nombre || TIPOS[tipo].label).slice(0, 40),
+        x: Number(raw.x) || 0,
+        y: Number(raw.y) || 0,
+        w: Math.max(0.5, Number(raw.w) || TIPOS[tipo].w),
+        h: Math.max(0.5, Number(raw.h) || TIPOS[tipo].h)
+      });
+    });
+
+    if (!imported.length) {
+      setPlanStatus(DXF_FALLBACK_TEXT, 'error');
+      if (dxfFallbackEl) dxfFallbackEl.hidden = false;
+      return;
+    }
+
+    var minX = Infinity;
+    var minY = Infinity;
+    var maxX = -Infinity;
+    var maxY = -Infinity;
+    imported.forEach(function (room) {
+      minX = Math.min(minX, room.x);
+      minY = Math.min(minY, room.y);
+      maxX = Math.max(maxX, room.x + room.w);
+      maxY = Math.max(maxY, room.y + room.h);
+    });
+
+    var margin = 0.5;
+    var spanX = Math.max(0.001, maxX - minX);
+    var spanY = Math.max(0.001, maxY - minY);
+    var scale = Math.min(
+      1,
+      (AREA.w - margin * 2) / spanX,
+      (AREA.d - margin * 2) / spanY
+    );
+    var adjusted = scale < 0.999;
+
+    imported.forEach(function (room) {
+      room.x = snap((room.x - minX) * scale + margin);
+      room.y = snap((room.y - minY) * scale + margin);
+      room.w = Math.max(0.5, snap(room.w * scale));
+      room.h = Math.max(0.5, snap(room.h * scale));
+      room.x = clamp(room.x, 0, AREA.w - room.w);
+      room.y = clamp(room.y, 0, AREA.d - room.h);
+    });
+
+    if (adjusted) warnings.push('Escala ajustada al lienzo.');
+
+    state.ambientes = imported;
+    state.aceptadas = {};
+    imported.forEach(function (room) {
+      state.aceptadas[room.id] = defaultsFor(room.tipo);
+    });
+    state.selectedId = imported[0].id;
+    state.template = null;
+    state.plano = null;
+    syncTemplates();
+    renderPlanoUI();
+    renderPlan();
+    renderProps();
+    renderSuggestions();
+    renderTotals();
+    schedule3D();
+    saveDraft();
+
+    var count = imported.length;
+    var mensaje = 'Traemos ' + count + ' ambientes de tu CAD — revisá tipos y posiciones.';
+    if (payload.unidades) mensaje += ' Unidades: ' + payload.unidades + '.';
+    if (warnings.length) mensaje += ' ' + warnings.join(' ');
+    setPlanStatus(mensaje, 'ok');
+    if (hintEl) {
+      hintEl.hidden = false;
+      hintEl.textContent = mensaje;
+    }
+    if (dxfFallbackEl) dxfFallbackEl.hidden = true;
+  }
+
+  function handleDxfFile(file) {
+    var name = (file && file.name) || 'plano.dxf';
+    if (!file || !file.size) {
+      setPlanStatus('No pudimos leer el archivo.', 'error');
+      return;
+    }
+    if (!/\.dxf$/i.test(name)) {
+      setPlanStatus('Subí un archivo .dxf exportado desde tu CAD.', 'error');
+      return;
+    }
+
+    setPlanStatus('Procesando CAD…', '');
+    if (dxfFallbackEl) dxfFallbackEl.hidden = true;
+
+    var body = new FormData();
+    body.append('file', file, name);
+
+    fetch('/dxf-parse', { method: 'POST', body: body })
+      .then(function (response) {
+        return response
+          .json()
+          .catch(function () { return null; })
+          .then(function (data) { return { response: response, data: data }; });
+      })
+      .then(function (result) {
+        if (!result.data || result.data.ok !== true) {
+          var msg = (result.data && result.data.error) || DXF_FALLBACK_TEXT;
+          setPlanStatus(msg, 'error');
+          if (dxfFallbackEl) dxfFallbackEl.hidden = false;
+          return;
+        }
+        applyDxf(result.data);
+      })
+      .catch(function () {
+        setPlanStatus(
+          'No pudimos procesar el CAD. Si estás sin servidor, usá el modo imagen.',
+          'error'
+        );
+        if (dxfFallbackEl) dxfFallbackEl.hidden = false;
+      });
   }
 
   // --- Render 2D -------------------------------------------------------------
@@ -1012,6 +1146,14 @@
     planRemoveEl.addEventListener('click', clearPlano);
   }
 
+  if (dxfFileEl) {
+    dxfFileEl.addEventListener('change', function () {
+      var file = dxfFileEl.files && dxfFileEl.files[0];
+      dxfFileEl.value = '';
+      if (file) handleDxfFile(file);
+    });
+  }
+
   // --- 3D --------------------------------------------------------------------
 
   var scene;
@@ -1020,6 +1162,7 @@
   var controls;
   var root = null;
   var stats = { meshes: 0, sprites: 0 };
+  var cameraLocked = false;
 
   function disposeRoot() {
     if (!root) return;
@@ -1187,8 +1330,17 @@
   }
 
   function focusCamera() {
-    camera.position.set(AREA.w * 0.95, 12.5, AREA.d * 1.45);
+    var aspect = camera.aspect || 1;
+    var vfov = (camera.fov * Math.PI) / 180;
+    var hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+    var distance =
+      Math.max(AREA.w / (2 * Math.tan(hfov / 2)), AREA.d / (2 * Math.tan(vfov / 2))) *
+        1.15 +
+      1.5;
+
     controls.target.set(AREA.w / 2, 0.35, AREA.d / 2);
+    var dir = new THREE.Vector3(0.42, 0.95, 0.75).normalize();
+    camera.position.copy(controls.target).addScaledVector(dir, distance);
     controls.update();
   }
 
@@ -1199,6 +1351,7 @@
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    if (!cameraLocked) focusCamera();
   }
 
   function init() {
@@ -1242,14 +1395,15 @@
       controls.autoRotateSpeed = 0.6;
       controls.addEventListener('start', function () {
         controls.autoRotate = false;
+        cameraLocked = true;
       });
     } else {
       controls = { target: new THREE.Vector3(AREA.w / 2, 0.35, AREA.d / 2), update: function () {} };
       camera.lookAt(controls.target);
     }
 
-    focusCamera();
     resize();
+    focusCamera();
     rebuildScene();
     window.addEventListener('resize', resize);
 

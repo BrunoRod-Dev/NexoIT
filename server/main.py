@@ -11,15 +11,18 @@ estático porque no contiene código.
 from __future__ import annotations
 
 import os
+import re
 import sys
+import tempfile
 import threading
 import time
+import unicodedata
 from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
-from fastapi import Depends, FastAPI, Form, Request
+from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -29,6 +32,11 @@ from starlette.middleware.sessions import SessionMiddleware
 
 import auth
 from models import Consulta, User, get_db, init_db
+
+try:
+    import ezdxf
+except Exception:  # pragma: no cover - si falta la dependencia, se responde 400
+    ezdxf = None
 
 BASE_DIR = Path(__file__).resolve().parent
 SITE_DIR = BASE_DIR.parent
@@ -64,13 +72,185 @@ RATE_LIMITS = {
     "consultas": {"limit": 10, "window": 60},  # 10 por minuto
     "registro": {"limit": 5, "window": 3600},  # 5 por hora
     "login": {"limit": 10, "window": 600},  # 10 cada 10 minutos
+    "dxf": {"limit": 5, "window": 60},  # 5 planos CAD por minuto
 }
 
 RATE_LIMIT_MESSAGES = {
     "consultas": "Demasiadas consultas en poco tiempo. Esperá un momento.",
     "registro": "Demasiados registros desde esta conexión. Esperá un rato y probá de nuevo.",
     "login": "Demasiados intentos. Esperá unos minutos y probá de nuevo.",
+    "dxf": "Demasiados planos CAD en poco tiempo. Esperá un momento.",
 }
+
+# --- DXF (F2c) -------------------------------------------------------------
+MAX_DXF_BYTES = 5 * 1024 * 1024
+MAX_DXF_REQUEST_BYTES = MAX_DXF_BYTES + 1024 * 1024  # multipart overhead
+DXF_CHUNK_SIZE = 64 * 1024
+MAX_DXF_POLYLINES = 5000
+DXF_FALLBACK = (
+    "No pudimos leer los ambientes automáticamente. "
+    "Probá subir una imagen del plano y dibujarlos encima."
+)
+DXF_TOO_LARGE = "El DXF supera los 5 MB. Exportá sólo la planta."
+DXF_UNITS = {
+    1: (0.0254, "in"),
+    2: (0.3048, "ft"),
+    4: (0.001, "mm"),
+    5: (0.01, "cm"),
+    6: (1.0, "m"),
+}
+DXF_TIPOS = {
+    "dormitorio": ("DORMITORIO", "HABITACION", "BEDROOM"),
+    "living": ("LIVING", "COMEDOR", "ESTAR", "SALA", "LIVINGROOM", "LIVING ROOM"),
+    "cocina": ("COCINA", "KITCHEN"),
+    "bano": ("BANO", "BATH"),
+    "oficina": ("OFICINA", "ESCRITORIO", "OFFICE", "STUDY"),
+    "garage": ("GARAGE", "GARAJE", "COCHERA"),
+    "exterior": ("PATIO", "JARDIN", "EXTERIOR", "TERRAZA", "BALCON"),
+}
+
+
+class DxfError(Exception):
+    """Error de parseo con mensaje apto para el cliente."""
+
+
+def _norm_label(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text or "")
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"\s+", " ", text).strip().upper()
+
+
+def _tipo_from_label(text: str):
+    norm = _norm_label(text)
+    for tipo, keys in DXF_TIPOS.items():
+        for key in keys:
+            if key in norm:
+                return tipo
+    return None
+
+
+def parse_dxf(data: bytes):
+    """Extrae ambientes de LWPOLYLINE cerradas + labels TEXT/MTEXT.
+
+    Estrategia v1 declarada: cada polilínea cerrada es un ambiente candidato y
+    cada texto se asigna al bbox que lo contiene. No infiere muros ni puertas.
+    """
+    if ezdxf is None:
+        raise DxfError(DXF_FALLBACK)
+
+    path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".dxf", delete=False) as handle:
+            path = handle.name
+            handle.write(data)
+
+        doc = ezdxf.readfile(path)
+        model = doc.modelspace()
+
+        ambientes = []
+        for entity in model.query("LWPOLYLINE"):
+            if len(ambientes) > MAX_DXF_POLYLINES:
+                raise DxfError(
+                    "El DXF tiene demasiados ambientes para procesar. Exportá sólo la planta."
+                )
+            if not entity.closed:
+                continue
+            points = [(float(p[0]), float(p[1])) for p in entity.get_points("xy")]
+            if len(points) < 3:
+                continue
+            xs = [p[0] for p in points]
+            ys = [p[1] for p in points]
+            x, y = min(xs), min(ys)
+            w, h = max(xs) - x, max(ys) - y
+            if w <= 0 or h <= 0:
+                continue
+            ambientes.append({"x": x, "y": y, "w": w, "h": h, "label": None})
+
+        if not ambientes:
+            raise DxfError(DXF_FALLBACK)
+
+        advertencias = []
+        for entity in model.query("TEXT MTEXT"):
+            try:
+                insert = entity.dxf.insert
+                if entity.dxftype() == "MTEXT":
+                    content = entity.plain_text()
+                else:
+                    content = entity.dxf.text
+                tx, ty = float(insert[0]), float(insert[1])
+            except Exception:
+                continue
+            nombre = re.sub(r"\s+", " ", (content or "")).strip()
+            if not nombre:
+                continue
+            target = None
+            for room in ambientes:
+                if (
+                    room["x"] <= tx <= room["x"] + room["w"]
+                    and room["y"] <= ty <= room["y"] + room["h"]
+                ):
+                    if target is None or room["w"] * room["h"] < target["w"] * target["h"]:
+                        target = room
+            if target is None or target["label"] is not None:
+                continue
+            tipo = _tipo_from_label(nombre)
+            clean = nombre[:40]
+            if tipo is None:
+                tipo = "living"
+                advertencias.append(f"Revisá el tipo de “{clean}”.")
+            target["label"] = (tipo, clean)
+
+        insunits = 0
+        try:
+            insunits = int(doc.header.get("$INSUNITS", 0) or 0)
+        except Exception:
+            insunits = 0
+
+        if insunits in DXF_UNITS:
+            factor, unidades = DXF_UNITS[insunits]
+            unidades = f"{unidades} ($INSUNITS)"
+        else:
+            promedio = sum(max(r["w"], r["h"]) for r in ambientes) / len(ambientes)
+            if promedio > 500:
+                factor, unidades = 0.001, "mm (estimado)"
+            elif promedio > 50:
+                factor, unidades = 0.01, "cm (estimado)"
+            else:
+                factor, unidades = 1.0, "m (estimado)"
+            advertencias.append(
+                "Unidades estimadas por el tamaño del plano: revisá las medidas."
+            )
+
+        sin_texto = False
+        resultado = []
+        for room in ambientes:
+            if room["label"]:
+                tipo, nombre = room["label"]
+            else:
+                tipo, nombre = "living", "Ambiente"
+                sin_texto = True
+            resultado.append(
+                {
+                    "tipo": tipo,
+                    "nombre": nombre,
+                    "x": round(room["x"] * factor, 2),
+                    "y": round(room["y"] * factor, 2),
+                    "w": round(room["w"] * factor, 2),
+                    "h": round(room["h"] * factor, 2),
+                }
+            )
+        if sin_texto:
+            advertencias.append(
+                "Hay ambientes sin texto: los nombramos “Ambiente” y podés renombrarlos."
+            )
+
+        return {"ambientes": resultado, "unidades": unidades, "advertencias": advertencias}
+    finally:
+        if path:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 class RateLimiter:
@@ -320,6 +500,61 @@ async def create_consulta(request: Request, db: Session = Depends(get_db)):
     )
     db.commit()
     return JSONResponse({"ok": True}, status_code=201)
+
+
+# --- DXF del arquitecto (F2c) ----------------------------------------------
+
+
+@app.post("/dxf-parse")
+async def dxf_parse(request: Request, file: UploadFile = File(...)):
+    """Convierte un DXF en ambientes candidatos (v1: polilíneas + textos)."""
+    if rate_limited(request, "dxf"):
+        return JSONResponse(
+            {"ok": False, "error": RATE_LIMIT_MESSAGES["dxf"]}, status_code=429
+        )
+    if not same_origin(request):
+        return JSONResponse(
+            {"ok": False, "error": "Origen no permitido."}, status_code=403
+        )
+
+    length_header = request.headers.get("content-length")
+    if length_header:
+        try:
+            if int(length_header) > MAX_DXF_REQUEST_BYTES:
+                return JSONResponse(
+                    {"ok": False, "error": DXF_TOO_LARGE}, status_code=400
+                )
+        except ValueError:
+            pass
+
+    chunks = []
+    total = 0
+    try:
+        while True:
+            chunk = await file.read(DXF_CHUNK_SIZE)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > MAX_DXF_BYTES:
+                return JSONResponse(
+                    {"ok": False, "error": DXF_TOO_LARGE}, status_code=400
+                )
+            chunks.append(chunk)
+    except Exception:
+        return JSONResponse({"ok": False, "error": DXF_FALLBACK}, status_code=400)
+
+    data = b"".join(chunks)
+    if not data:
+        return JSONResponse({"ok": False, "error": DXF_FALLBACK}, status_code=400)
+
+    try:
+        result = parse_dxf(data)
+    except DxfError as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+    except Exception:
+        return JSONResponse({"ok": False, "error": DXF_FALLBACK}, status_code=400)
+
+    return JSONResponse({"ok": True, **result}, status_code=200)
 
 
 # --- Área de clientes ------------------------------------------------------

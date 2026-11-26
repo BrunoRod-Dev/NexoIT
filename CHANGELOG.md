@@ -69,3 +69,10 @@ Historial por fases de NexoIT. Fuente de hashes/fechas: `git log --oneline`.
 - El plano se proyecta como **textura en el preview 3D** cuando aplica.
 - El draft en `localStorage` guarda la imagen **downscaleada** (~2.5 MB de límite práctico), sin cuenta.
 - El teaser de la landing pasa a feature real: "Subí tu plano y dibujá tus ambientes encima."
+
+## F2c — DXF del arquitecto a modelo
+
+- Nuevo `POST /dxf-parse` con **ezdxf** (dependencia del server, en `requirements.txt`): convierte el `.dxf` del arquitecto en ambientes del modelo.
+- Detección por **polilíneas cerradas + etiquetas** (labels ES/EN) y **heurística de unidades** (mm/cm/m).
+- Botón **"Tengo el CAD (DXF)"** en el configurador, con fallback honesto a modo imagen cuando el DXF no trae polilíneas cerradas.
+- Revisás tipos/posiciones después de importar; las sugerencias por ambiente corren igual que en el resto del editor.
